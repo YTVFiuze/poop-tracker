@@ -180,6 +180,74 @@ function handleShake() {
     showNotification('Registrazione iniziata! ');
 }
 
+// Funzione per salvare un record
+function saveRecord(formData) {
+    // Carica i record esistenti
+    const records = JSON.parse(localStorage.getItem('poopRecords') || '[]');
+    
+    // Aggiungi il nuovo record
+    records.push(formData);
+    
+    // Salva nel localStorage
+    localStorage.setItem('poopRecords', JSON.stringify(records));
+    
+    // Aggiorna l'interfaccia se siamo nella pagina statistiche
+    if (window.location.pathname.includes('statistics.html')) {
+        displayRecords();
+        updateStatistics();
+    }
+}
+
+// Funzione per visualizzare i record
+function displayRecords() {
+    const recordsContainer = document.getElementById('records');
+    if (!recordsContainer) return;
+
+    // Carica i record dal localStorage
+    const records = JSON.parse(localStorage.getItem('poopRecords') || '[]');
+    
+    // Ordina i record per data e ora (più recenti prima)
+    records.sort((a, b) => {
+        const dateA = new Date(a.date + 'T' + a.time);
+        const dateB = new Date(b.date + 'T' + b.time);
+        return dateB - dateA;
+    });
+
+    // Crea l'HTML per i record
+    const recordsHTML = records.map(record => {
+        // Formatta la data
+        const date = new Date(record.date + 'T' + record.time);
+        const formattedDate = date.toLocaleDateString('it-IT', {
+            weekday: 'long',
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+
+        // Crea le stelle
+        const stars = '⭐'.repeat(parseInt(record.rating));
+
+        return `
+            <div class="record-card">
+                <div class="record-header">
+                    <span class="record-date">${formattedDate}</span>
+                    <span class="record-duration">${record.duration} min</span>
+                </div>
+                <div class="record-body">
+                    <span class="record-rating">${stars}</span>
+                    <span class="record-mood">${record.mood}</span>
+                </div>
+                ${record.notes ? `<div class="record-notes">${record.notes}</div>` : ''}
+            </div>
+        `;
+    }).join('');
+
+    // Aggiorna il contenitore
+    recordsContainer.innerHTML = recordsHTML || '<p>Nessuna visita registrata</p>';
+}
+
 // Gestione del form
 function setupForm() {
     const form = document.getElementById('poopForm');
@@ -211,13 +279,9 @@ function setupForm() {
         };
 
         // Salva i dati
-        const records = JSON.parse(localStorage.getItem('poopRecords') || '[]');
-        records.push(formData);
-        localStorage.setItem('poopRecords', JSON.stringify(records));
+        saveRecord(formData);
         
-        // Aggiorna l'interfaccia
-        displayRecords();
-        updateStatistics();
+        // Mostra notifica
         showNotification('Visita registrata con successo! 🎉');
         
         // Reset form
@@ -254,6 +318,12 @@ function startTimer() {
         if (timerPopup) {
             timerPopup.style.display = 'flex';
             timerPopup.style.opacity = '1';
+            
+            // Aggiungi event listener al pulsante stop
+            if (stopTimerBtn) {
+                stopTimerBtn.onclick = stopTimer;
+                stopTimerBtn.disabled = false;
+            }
         }
         
         // Imposta il valore iniziale del timer
@@ -267,11 +337,6 @@ function startTimer() {
         
         // Avvia l'aggiornamento periodico
         timerInterval = setInterval(updateTimerDisplay, 1000);
-        
-        // Abilita il pulsante di stop
-        if (stopTimerBtn) {
-            stopTimerBtn.disabled = false;
-        }
     }
 }
 
@@ -296,6 +361,7 @@ function updateTimerDisplay() {
 
 function stopTimer() {
     if (!isTimerRunning) return;
+    console.log('Stopping timer...');
 
     // Ferma il timer
     clearInterval(timerInterval);
@@ -316,12 +382,13 @@ function stopTimer() {
         setTimeout(() => {
             timerPopup.style.display = 'none';
             timerPopup.style.opacity = '1';
+            
+            // Rimuovi event listener dal pulsante stop
+            if (stopTimerBtn) {
+                stopTimerBtn.onclick = null;
+                stopTimerBtn.disabled = true;
+            }
         }, 300);
-    }
-    
-    // Disabilita il pulsante di stop
-    if (stopTimerBtn) {
-        stopTimerBtn.disabled = true;
     }
     
     // Reset delle variabili
@@ -696,38 +763,6 @@ function showRandomHealthTip() {
     // Mostra un consiglio casuale
     const randomIndex = Math.floor(Math.random() * healthTips.length);
     dailyTipElement.textContent = healthTips[randomIndex];
-}
-
-function saveRecord(formData) {
-    const records = JSON.parse(localStorage.getItem('poopRecords') || '[]');
-    records.push(formData);
-    localStorage.setItem('poopRecords', JSON.stringify(records));
-    displayRecords();
-}
-
-function displayRecords() {
-    const records = JSON.parse(localStorage.getItem('poopRecords') || '[]');
-    recordsContainer.innerHTML = '';
-    
-    records.reverse().forEach(record => {
-        const recordElement = document.createElement('div');
-        recordElement.className = 'record-card';
-        recordElement.innerHTML = `
-            <div class="record-header">
-                <span class="record-date">${record.date}</span>
-                <span class="record-time">${record.time}</span>
-            </div>
-            <div class="record-details">
-                <span class="record-duration">⏱️ ${record.duration} min</span>
-                <span class="record-rating">⭐ ${record.rating}/5</span>
-                <span class="record-mood">${record.mood}</span>
-            </div>
-            ${record.notes ? `<div class="record-notes">${record.notes}</div>` : ''}
-        `;
-        recordsContainer.appendChild(recordElement);
-    });
-    
-    updateStatistics();
 }
 
 requestMotionPermission();

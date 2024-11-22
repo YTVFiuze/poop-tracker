@@ -359,11 +359,53 @@ h2 {
 }
 
 .record-card {
-    background: var(--card-background);
-    padding: 1.5rem;
+    background: var(--background-color);
     border-radius: var(--border-radius);
+    padding: 1rem;
     margin-bottom: 1rem;
-    transition: all 0.3s ease;
+    box-shadow: 0 2px 4px var(--shadow-color);
+}
+
+.record-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.5rem;
+    color: var(--text-color);
+    font-size: 0.9rem;
+}
+
+.record-date {
+    font-weight: 500;
+}
+
+.record-duration {
+    color: var(--primary-color);
+    font-weight: 500;
+}
+
+.record-body {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin: 0.5rem 0;
+}
+
+.record-rating {
+    color: #ffd700;
+}
+
+.record-mood {
+    font-size: 1.2rem;
+}
+
+.record-notes {
+    margin-top: 0.5rem;
+    padding-top: 0.5rem;
+    border-top: 1px solid var(--secondary-dark);
+    font-size: 0.9rem;
+    color: var(--text-color);
+    opacity: 0.8;
 }
 
 .record-card:hover {
