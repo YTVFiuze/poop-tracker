@@ -40,12 +40,27 @@ let timeDistributionChart;
 
 // Inizializzazione
 document.addEventListener('DOMContentLoaded', () => {
+    // Carica i dati salvati
+    const records = loadRecords();
+    
+    // Inizializza l'app in base alla pagina corrente
     initializeApp();
-    setupForm();
+    
+    // Setup degli event listeners
     setupEventListeners();
-    loadRecords();
-    updateStatistics();
-    showRandomHealthTip();
+    
+    // Setup del form se siamo nella home
+    if (window.location.pathname.includes('index.html') || window.location.pathname.endsWith('/')) {
+        setupForm();
+        showRandomHealthTip();
+    }
+    
+    // Setup delle statistiche se siamo nella pagina statistiche
+    if (window.location.pathname.includes('statistics.html')) {
+        displayRecords(records);
+        updateStatistics(records);
+        setupCharts();
+    }
 });
 
 function initializeApp() {
@@ -165,71 +180,6 @@ function handleShake() {
     showNotification('Registrazione iniziata! ');
 }
 
-// Gestione del timer
-function startTimer() {
-    if (!isTimerRunning) {
-        isTimerRunning = true;
-        startTime = Date.now();
-        timerPopup.style.display = 'flex';
-        timerPopup.style.opacity = '1';
-        
-        // Imposta il valore iniziale del timer
-        document.getElementById('duration').value = '0';
-        
-        // Aggiorna immediatamente il display
-        updateTimerDisplay();
-        
-        timerInterval = setInterval(updateTimerDisplay, 1000);
-        
-        // Abilita il pulsante di stop
-        if (stopTimerBtn) {
-            stopTimerBtn.disabled = false;
-        }
-    }
-}
-
-function updateTimerDisplay() {
-    const elapsedTime = Date.now() - startTime;
-    const minutes = Math.floor(elapsedTime / 60000);
-    const seconds = Math.floor((elapsedTime % 60000) / 1000);
-    
-    if (timerDisplay) {
-        timerDisplay.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-    }
-    
-    const durationInput = document.getElementById('duration');
-    if (durationInput) {
-        durationInput.value = minutes.toString();
-    }
-}
-
-function stopTimer() {
-    if (isTimerRunning) {
-        clearInterval(timerInterval);
-        isTimerRunning = false;
-        
-        const elapsedMinutes = Math.floor((Date.now() - startTime) / 60000);
-        const durationInput = document.getElementById('duration');
-        if (durationInput) {
-            durationInput.value = elapsedMinutes.toString();
-        }
-        
-        // Nascondi il popup con una transizione
-        if (timerPopup) {
-            timerPopup.style.opacity = '0';
-            setTimeout(() => {
-                timerPopup.style.display = 'none';
-                timerPopup.style.opacity = '1';
-            }, 300);
-        }
-        
-        // Disabilita il pulsante di stop
-        if (stopTimerBtn) {
-            stopTimerBtn.disabled = true;
-        }
-    }
-}
-
 // Gestione del form
 function setupForm() {
     const form = document.getElementById('poopForm');
@@ -238,15 +188,28 @@ function setupForm() {
     form.addEventListener('submit', function(e) {
         e.preventDefault();
         
+        // Imposta data e ora correnti se non specificate
+        const now = new Date();
+        const currentDate = now.toISOString().split('T')[0];
+        const currentTime = now.toTimeString().slice(0, 5);
+
+        // Raccogli i dati dal form con controlli
+        const dateInput = document.getElementById('date');
+        const timeInput = document.getElementById('time');
+        const durationInput = document.getElementById('duration');
+        const ratingInput = document.getElementById('rating');
+        const moodInput = document.getElementById('mood');
+        const notesInput = document.getElementById('notes');
+
         const formData = {
-            date: document.getElementById('date').value || new Date().toISOString().split('T')[0],
-            time: document.getElementById('time').value || new Date().toTimeString().slice(0, 5),
-            duration: document.getElementById('duration').value || '0',
-            rating: document.getElementById('rating').value || '3',
-            mood: document.getElementById('mood').value || '😊',
-            notes: document.getElementById('notes').value || ''
+            date: dateInput ? dateInput.value || currentDate : currentDate,
+            time: timeInput ? timeInput.value || currentTime : currentTime,
+            duration: durationInput ? durationInput.value || '0' : '0',
+            rating: ratingInput ? ratingInput.value || '3' : '3',
+            mood: moodInput ? moodInput.value || '😊' : '😊',
+            notes: notesInput ? notesInput.value || '' : ''
         };
-        
+
         // Salva i dati
         const records = JSON.parse(localStorage.getItem('poopRecords') || '[]');
         records.push(formData);
@@ -258,14 +221,18 @@ function setupForm() {
         showNotification('Visita registrata con successo! 🎉');
         
         // Reset form
-        this.reset();
-        document.getElementById('rating').value = '3';
-        document.getElementById('mood').value = '😊';
+        form.reset();
         
-        // Reset stars and moods
+        // Reset inputs nascosti
+        if (ratingInput) ratingInput.value = '3';
+        if (moodInput) moodInput.value = '😊';
+        
+        // Reset stelle
         document.querySelectorAll('.star').forEach(s => {
             s.classList.toggle('active', s.dataset.rating <= 3);
         });
+        
+        // Reset emoji
         document.querySelectorAll('.mood').forEach(m => {
             m.classList.toggle('active', m.dataset.mood === '😊');
         });
@@ -275,6 +242,91 @@ function setupForm() {
             stopTimer();
         }
     });
+}
+
+// Gestione del timer
+function startTimer() {
+    if (!isTimerRunning) {
+        isTimerRunning = true;
+        startTime = Date.now();
+        
+        // Mostra il popup del timer
+        if (timerPopup) {
+            timerPopup.style.display = 'flex';
+            timerPopup.style.opacity = '1';
+        }
+        
+        // Imposta il valore iniziale del timer
+        const durationInput = document.getElementById('duration');
+        if (durationInput) {
+            durationInput.value = '0';
+        }
+        
+        // Aggiorna immediatamente il display
+        updateTimerDisplay();
+        
+        // Avvia l'aggiornamento periodico
+        timerInterval = setInterval(updateTimerDisplay, 1000);
+        
+        // Abilita il pulsante di stop
+        if (stopTimerBtn) {
+            stopTimerBtn.disabled = false;
+        }
+    }
+}
+
+function updateTimerDisplay() {
+    if (!isTimerRunning || !startTime) return;
+
+    const elapsedTime = Date.now() - startTime;
+    const minutes = Math.floor(elapsedTime / 60000);
+    const seconds = Math.floor((elapsedTime % 60000) / 1000);
+    
+    // Aggiorna il display del timer
+    if (timerDisplay) {
+        timerDisplay.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+    }
+    
+    // Aggiorna il campo durata
+    const durationInput = document.getElementById('duration');
+    if (durationInput) {
+        durationInput.value = minutes.toString();
+    }
+}
+
+function stopTimer() {
+    if (!isTimerRunning) return;
+
+    // Ferma il timer
+    clearInterval(timerInterval);
+    isTimerRunning = false;
+    
+    // Calcola la durata finale
+    const elapsedMinutes = Math.floor((Date.now() - startTime) / 60000);
+    
+    // Aggiorna il campo durata
+    const durationInput = document.getElementById('duration');
+    if (durationInput) {
+        durationInput.value = elapsedMinutes.toString();
+    }
+    
+    // Nascondi il popup con una transizione
+    if (timerPopup) {
+        timerPopup.style.opacity = '0';
+        setTimeout(() => {
+            timerPopup.style.display = 'none';
+            timerPopup.style.opacity = '1';
+        }, 300);
+    }
+    
+    // Disabilita il pulsante di stop
+    if (stopTimerBtn) {
+        stopTimerBtn.disabled = true;
+    }
+    
+    // Reset delle variabili
+    startTime = null;
+    timerInterval = null;
 }
 
 // Gestione delle notifiche
