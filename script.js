@@ -485,182 +485,156 @@ function setupWaterReminder() {
     });
 }
 
-function setupCharts() {
-    const visitsCtx = document.getElementById('visitsChart')?.getContext('2d');
-    const timeCtx = document.getElementById('timeDistributionChart')?.getContext('2d');
+function getVisitsData() {
+    const records = JSON.parse(localStorage.getItem('poopRecords') || '[]');
     
-    if (!visitsCtx || !timeCtx) return;
-
-    // Colori del tema
-    const colors = {
-        primary: '#6C63FF',
-        secondary: '#FF6B6B',
-        tertiary: '#4ECDC4',
-        background: 'rgba(255, 255, 255, 0.1)',
-        text: getComputedStyle(document.documentElement).getPropertyValue('--text-color').trim()
+    // Raggruppa le visite per giorno
+    const visitsByDay = {};
+    records.forEach(record => {
+        const date = record.date;
+        visitsByDay[date] = (visitsByDay[date] || 0) + 1;
+    });
+    
+    // Ordina le date
+    const sortedDates = Object.keys(visitsByDay).sort();
+    
+    // Prendi gli ultimi 7 giorni
+    const last7Days = sortedDates.slice(-7);
+    
+    return {
+        labels: last7Days.map(date => {
+            const d = new Date(date);
+            return d.toLocaleDateString('it-IT', { weekday: 'short', day: 'numeric' });
+        }),
+        data: last7Days.map(date => visitsByDay[date])
     };
+}
 
-    // Configurazione comune per i grafici
-    const commonOptions = {
-        responsive: true,
-        maintainAspectRatio: true,
-        plugins: {
-            legend: {
-                display: true,
-                position: 'top',
-                labels: {
-                    usePointStyle: true,
-                    pointStyle: 'circle',
-                    padding: 15,
-                    font: {
-                        size: window.innerWidth < 768 ? 11 : 13,
-                        family: "'Poppins', sans-serif",
-                        weight: '500'
-                    }
-                }
-            },
-            tooltip: {
-                backgroundColor: 'rgba(0, 0, 0, 0.8)',
-                titleFont: {
-                    size: 14,
-                    family: "'Poppins', sans-serif",
-                    weight: '600'
-                },
-                bodyFont: {
-                    size: 13,
-                    family: "'Poppins', sans-serif"
-                },
-                padding: 12,
-                cornerRadius: 8,
-                displayColors: false
-            }
-        },
-        scales: {
-            y: {
-                beginAtZero: true,
-                grid: {
-                    color: 'rgba(0, 0, 0, 0.05)',
-                    drawBorder: false
-                },
-                ticks: {
-                    font: {
-                        size: window.innerWidth < 768 ? 11 : 12,
-                        family: "'Poppins', sans-serif"
-                    },
-                    padding: 8,
-                    color: colors.text
-                }
-            },
-            x: {
-                grid: {
-                    display: false
-                },
-                ticks: {
-                    font: {
-                        size: window.innerWidth < 768 ? 11 : 12,
-                        family: "'Poppins', sans-serif"
-                    },
-                    padding: 8,
-                    color: colors.text
-                }
-            }
-        }
+function getTimeDistribution() {
+    const records = JSON.parse(localStorage.getItem('poopRecords') || '[]');
+    
+    // Inizializza array per le 24 ore
+    const hourlyDistribution = new Array(24).fill(0);
+    
+    // Conta le visite per ogni ora
+    records.forEach(record => {
+        const hour = parseInt(record.time.split(':')[0]);
+        hourlyDistribution[hour]++;
+    });
+    
+    return {
+        labels: Array.from({length: 24}, (_, i) => `${i.toString().padStart(2, '0')}:00`),
+        data: hourlyDistribution
     };
+}
 
-    // Grafico visite per giorno
-    const visitsData = getVisitsData();
+function setupCharts() {
+    const visitsChartCanvas = document.getElementById('visitsChart');
+    const timeDistributionChartCanvas = document.getElementById('timeDistributionChart');
+    
+    if (!visitsChartCanvas || !timeDistributionChartCanvas) return;
+    
+    // Distruggi i grafici esistenti se presenti
     if (visitsChart) visitsChart.destroy();
-    visitsChart = new Chart(visitsCtx, {
+    if (timeDistributionChart) timeDistributionChart.destroy();
+    
+    // Dati per il grafico delle visite
+    const visitsData = getVisitsData();
+    
+    // Crea il grafico delle visite
+    visitsChart = new Chart(visitsChartCanvas, {
         type: 'bar',
         data: {
             labels: visitsData.labels,
             datasets: [{
                 label: 'Visite',
                 data: visitsData.data,
-                backgroundColor: [
-                    'rgba(108, 99, 255, 0.7)',
-                    'rgba(255, 107, 107, 0.7)',
-                    'rgba(78, 205, 196, 0.7)',
-                    'rgba(255, 180, 95, 0.7)',
-                    'rgba(131, 96, 195, 0.7)',
-                    'rgba(87, 190, 177, 0.7)',
-                    'rgba(255, 145, 144, 0.7)'
-                ],
-                borderColor: [
-                    'rgb(108, 99, 255)',
-                    'rgb(255, 107, 107)',
-                    'rgb(78, 205, 196)',
-                    'rgb(255, 180, 95)',
-                    'rgb(131, 96, 195)',
-                    'rgb(87, 190, 177)',
-                    'rgb(255, 145, 144)'
-                ],
+                backgroundColor: 'rgba(108, 99, 255, 0.7)',
+                borderColor: 'rgb(108, 99, 255)',
                 borderWidth: 2,
                 borderRadius: 8,
-                maxBarThickness: 40
+                hoverBackgroundColor: 'rgba(108, 99, 255, 0.9)'
             }]
         },
         options: {
-            ...commonOptions,
+            responsive: true,
+            maintainAspectRatio: false,
             plugins: {
-                ...commonOptions.plugins,
+                legend: {
+                    display: false
+                },
                 tooltip: {
-                    ...commonOptions.plugins.tooltip,
+                    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                    titleColor: '#2c3e50',
+                    bodyColor: '#2c3e50',
+                    borderColor: 'rgba(108, 99, 255, 0.3)',
+                    borderWidth: 1,
+                    padding: 12,
+                    displayColors: false,
                     callbacks: {
-                        label: function(context) {
-                            return `${context.parsed.y} visite`;
-                        }
+                        title: (items) => `${items[0].label}`,
+                        label: (item) => `${item.formattedValue} visite`
                     }
                 }
             },
             scales: {
-                ...commonOptions.scales,
                 y: {
-                    ...commonOptions.scales.y,
+                    beginAtZero: true,
                     ticks: {
-                        ...commonOptions.scales.y.ticks,
                         stepSize: 1
                     }
                 }
             }
         }
     });
-
-    // Grafico distribuzione oraria
+    
+    // Dati per il grafico della distribuzione oraria
     const timeData = getTimeDistribution();
-    if (timeDistributionChart) timeDistributionChart.destroy();
-    timeDistributionChart = new Chart(timeCtx, {
-        type: 'doughnut',
+    
+    // Crea il grafico della distribuzione oraria
+    timeDistributionChart = new Chart(timeDistributionChartCanvas, {
+        type: 'line',
         data: {
             labels: timeData.labels,
             datasets: [{
+                label: 'Visite',
                 data: timeData.data,
-                backgroundColor: [
-                    'rgba(108, 99, 255, 0.8)',
-                    'rgba(255, 107, 107, 0.8)',
-                    'rgba(78, 205, 196, 0.8)'
-                ],
-                borderColor: [
-                    'rgb(108, 99, 255)',
-                    'rgb(255, 107, 107)',
-                    'rgb(78, 205, 196)'
-                ],
+                backgroundColor: 'rgba(255, 107, 107, 0.2)',
+                borderColor: 'rgb(255, 107, 107)',
                 borderWidth: 2,
-                hoverOffset: 15
+                pointBackgroundColor: 'rgb(255, 107, 107)',
+                pointRadius: 4,
+                pointHoverRadius: 6,
+                fill: true,
+                tension: 0.4
             }]
         },
         options: {
-            ...commonOptions,
-            cutout: '60%',
-            radius: '90%',
+            responsive: true,
+            maintainAspectRatio: false,
             plugins: {
-                ...commonOptions.plugins,
+                legend: {
+                    display: false
+                },
                 tooltip: {
-                    ...commonOptions.plugins.tooltip,
+                    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                    titleColor: '#2c3e50',
+                    bodyColor: '#2c3e50',
+                    borderColor: 'rgba(255, 107, 107, 0.3)',
+                    borderWidth: 1,
+                    padding: 12,
+                    displayColors: false,
                     callbacks: {
-                        label: function(context) {
-                            return `${context.parsed} visite`;
-                        }
+                        title: (items) => `Ora: ${items[0].label}`,
+                        label: (item) => `${item.formattedValue} visite`
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        stepSize: 1
                     }
                 }
             }
@@ -668,101 +642,50 @@ function setupCharts() {
     });
 }
 
-// Aggiorna i grafici quando la finestra viene ridimensionata
-window.addEventListener('resize', debounce(() => {
-    setupCharts();
-}, 250));
-
-function debounce(func, wait) {
-    let timeout;
-    return function executedFunction(...args) {
-        const later = () => {
-            clearTimeout(timeout);
-            func(...args);
-        };
-        clearTimeout(timeout);
-        timeout = setTimeout(later, wait);
-    };
-}
-
-function getVisitsData() {
-    const records = JSON.parse(localStorage.getItem('poopRecords') || '[]');
-    const lastWeekRecords = records.filter(r => {
-        const date = new Date(r.date);
-        const weekAgo = new Date();
-        weekAgo.setDate(weekAgo.getDate() - 7);
-        return date >= weekAgo;
-    });
-    
-    const visitsByDay = Array(7).fill(0);
-    lastWeekRecords.forEach(record => {
-        const date = new Date(record.date);
-        const dayIndex = date.getDay();
-        visitsByDay[dayIndex]++;
-    });
-    
-    return {
-        labels: ['Domenica', 'Lunedì', 'Martedì', 'Mercoledì', 'Giovedì', 'Venerdì', 'Sabato'],
-        data: visitsByDay
-    };
-}
-
-function getTimeDistribution() {
-    const records = JSON.parse(localStorage.getItem('poopRecords') || '[]');
-    const timeDistribution = [0, 0, 0]; // mattina, pomeriggio, sera
-    records.forEach(record => {
-        const hour = parseInt(record.time.split(':')[0]);
-        if (hour >= 6 && hour < 12) timeDistribution[0]++;
-        else if (hour >= 12 && hour < 18) timeDistribution[1]++;
-        else timeDistribution[2]++;
-    });
-    
-    return {
-        labels: ['Mattina (6-12)', 'Pomeriggio (12-18)', 'Sera (18-6)'],
-        data: timeDistribution
-    };
-}
-
 function updateStatistics() {
     const records = JSON.parse(localStorage.getItem('poopRecords') || '[]');
     
-    // Aggiorna statistiche generali
-    document.getElementById('totalVisits').textContent = records.length;
-    
-    // Calcola media giornaliera
-    if (records.length > 0) {
-        const dates = [...new Set(records.map(r => r.date))];
-        const dailyAvg = (records.length / dates.length).toFixed(1);
-        document.getElementById('dailyAverage').textContent = dailyAvg;
+    if (records.length === 0) {
+        if (document.getElementById('totalVisits')) document.getElementById('totalVisits').textContent = '0';
+        if (document.getElementById('dailyAverage')) document.getElementById('dailyAverage').textContent = '0';
+        if (document.getElementById('averageDuration')) document.getElementById('averageDuration').textContent = '0 min';
+        if (document.getElementById('averageRating')) document.getElementById('averageRating').textContent = '0 ⭐';
+        return;
     }
     
-    // Calcola durata media
-    if (records.length > 0) {
-        const avgDuration = (records.reduce((sum, r) => sum + parseInt(r.duration || 0), 0) / records.length).toFixed(1);
-        document.getElementById('averageDuration').textContent = avgDuration + ' min';
+    // Calcola le statistiche
+    const totalVisits = records.length;
+    
+    // Calcola la media giornaliera
+    const dates = new Set(records.map(r => r.date));
+    const dailyAverage = (totalVisits / dates.size).toFixed(1);
+    
+    // Calcola la durata media
+    const totalDuration = records.reduce((sum, r) => sum + parseInt(r.duration || 0), 0);
+    const averageDuration = (totalDuration / totalVisits).toFixed(1);
+    
+    // Calcola la valutazione media
+    const totalRating = records.reduce((sum, r) => sum + parseInt(r.rating || 0), 0);
+    const averageRating = (totalRating / totalVisits).toFixed(1);
+    
+    // Aggiorna l'interfaccia
+    if (document.getElementById('totalVisits')) {
+        document.getElementById('totalVisits').textContent = totalVisits;
+    }
+    if (document.getElementById('dailyAverage')) {
+        document.getElementById('dailyAverage').textContent = dailyAverage;
+    }
+    if (document.getElementById('averageDuration')) {
+        document.getElementById('averageDuration').textContent = `${averageDuration} min`;
+    }
+    if (document.getElementById('averageRating')) {
+        document.getElementById('averageRating').textContent = `${averageRating} ⭐`;
     }
     
-    // Calcola valutazione media
-    if (records.length > 0) {
-        const avgRating = (records.reduce((sum, r) => sum + parseInt(r.rating || 3), 0) / records.length).toFixed(1);
-        document.getElementById('averageRating').textContent = avgRating + ' ';
+    // Aggiorna i grafici
+    if (window.location.pathname.includes('statistics.html')) {
+        setupCharts();
     }
-    
-    // Aggiorna grafico visite per giorno
-    const visitsData = getVisitsData();
-    visitsChart.data.datasets[0].data = visitsData.data;
-    visitsChart.update();
-    
-    // Aggiorna grafico distribuzione oraria
-    const timeData = getTimeDistribution();
-    timeDistributionChart.data.datasets[0].data = timeData.data;
-    timeDistributionChart.update();
-}
-
-function showRandomHealthTip() {
-    // Mostra un consiglio casuale
-    const randomIndex = Math.floor(Math.random() * healthTips.length);
-    dailyTipElement.textContent = healthTips[randomIndex];
 }
 
 requestMotionPermission();
