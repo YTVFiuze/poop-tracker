@@ -55,47 +55,51 @@ try {
             Write-ColorLog "Configurazione email Git..." "Yellow"
             git config --global user.email "ytv.fiuze@gmail.com"
         }
-        
+
         # Aggiungi tutte le modifiche
+        Write-ColorLog "Aggiunta delle modifiche..." "Yellow"
         git add .
-        Write-ColorLog "File aggiunti all'area di staging" "Green"
+
+        # Crea il messaggio di commit con i dettagli delle modifiche
+        $changes = git status --porcelain | ForEach-Object {
+            $_ -replace '^\s*[\?\w]\s+',''
+        }
+        $commitMessage = "Auto-commit: Modifiche a`n`n$($changes -join "`n")"
         
-        # Crea il commit con timestamp e dettagli delle modifiche
-        $timestamp = Get-FormattedTimestamp
-        $changes = git diff --cached --name-status
-        $commitMessage = "Auto commit: $timestamp`n`nModifiche:`n$changes"
+        # Esegui il commit
+        Write-ColorLog "Esecuzione commit..." "Yellow"
         git commit -m $commitMessage
-        Write-ColorLog "Commit creato" "Green"
-        
-        # Push delle modifiche con output dettagliato e retry
+
+        # Prova a pushare con retry
         $maxRetries = 3
         $retryCount = 0
-        $pushSuccess = $false
-        
-        while (-not $pushSuccess -and $retryCount -lt $maxRetries) {
-            Write-ColorLog "Tentativo di push ($($retryCount + 1)/$maxRetries)..." "Yellow"
-            $pushOutput = git push origin main 2>&1
-            if ($LASTEXITCODE -eq 0) {
-                Write-ColorLog "Push completato con successo" "Green"
-                $pushSuccess = $true
-            } else {
+        $pushed = $false
+
+        while (-not $pushed -and $retryCount -lt $maxRetries) {
+            try {
+                Write-ColorLog "Tentativo push $($retryCount + 1)/$maxRetries..." "Yellow"
+                git push
+                $pushed = $true
+                Write-ColorLog "Push completato con successo!" "Green"
+            }
+            catch {
                 $retryCount++
                 if ($retryCount -lt $maxRetries) {
-                    Write-ColorLog "Push fallito, nuovo tentativo tra 3 secondi..." "Yellow"
-                    Start-Sleep -Seconds 3
-                } else {
-                    Write-ColorLog "Errore durante il push: $pushOutput" "Red"
-                    throw "Push fallito dopo $maxRetries tentativi"
+                    Write-ColorLog "Push fallito. Attendo 5 secondi prima di riprovare..." "Red"
+                    Start-Sleep -Seconds 5
+                }
+                else {
+                    throw "Push fallito dopo $maxRetries tentativi: $_"
                 }
             }
         }
     }
     else {
-        Write-ColorLog "Nessuna modifica rilevata" "Cyan"
+        Write-ColorLog "Nessuna modifica rilevata" "Green"
     }
 }
 catch {
     Write-ColorLog "Errore: $_" "Red"
-    Write-ColorLog "Stack trace: $($_.ScriptStackTrace)" "Red"
+    Write-ColorLog $_.ScriptStackTrace "Red"
     exit 1
 }

@@ -22,15 +22,11 @@ Set-Location $projectDir
 Write-ColorLog "Avvio monitoraggio modifiche in: $projectDir" "Cyan"
 Write-ColorLog "Premi Ctrl+C per terminare" "Yellow"
 
-# Crea un FileSystemWatcher per monitorare le modifiche
-$watcher = New-Object System.IO.FileSystemWatcher
-$watcher.Path = $projectDir
-$watcher.IncludeSubdirectories = $true
-$watcher.EnableRaisingEvents = $true
+# File types to monitor
+$fileTypes = @("*.html", "*.css", "*.js", "*.md")
 
-# Pattern da monitorare
-$watcher.Filter = "*.html;*.css;*.js;*.md"  # Monitora solo i file rilevanti
-$excludePatterns = @("*.git*", "*node_modules*", "*temp*")
+# Pattern da escludere
+$excludePatterns = @("*.git*", "*node_modules*", "*temp*", "*.vscode*")
 
 # Funzione per verificare se un file deve essere escluso
 function Test-ShouldExcludeFile {
@@ -43,116 +39,112 @@ function Test-ShouldExcludeFile {
     return $false
 }
 
-$watcher.NotifyFilter = [System.IO.NotifyFilters]::FileName -bor 
-                       [System.IO.NotifyFilters]::DirectoryName -bor 
-                       [System.IO.NotifyFilters]::LastWrite
-
-# Variabili per il debounce
-$debounceSeconds = 2  # Ridotto da 5 a 2 secondi
-$lastRunTime = [DateTime]::MinValue
-$timer = $null
-
 # Funzione per gestire le modifiche
-function Invoke-FileChangeHandler {
-    param([string]$changeType, [string]$path)
+$lastChange = [DateTime]::MinValue
+$debounceSeconds = 2
+
+function Invoke-FileChange {
+    param(
+        [string]$changeType,
+        [string]$path
+    )
     
-    # Ignora i file che devono essere esclusi
+    $now = Get-Date
+    
+    # Verifica se il file deve essere escluso
     if (Test-ShouldExcludeFile $path) {
         Write-ColorLog "File ignorato: $path" "Gray"
         return
     }
-
-    $now = Get-Date
-    $script:lastRunTime = $now
     
-    # Se c'è già un timer in esecuzione, cancellalo
-    if ($null -ne $script:timer) {
-        $script:timer.Stop()
-        $script:timer.Dispose()
+    # Verifica se il file è uno dei tipi che vogliamo monitorare
+    $isValidFile = $false
+    foreach ($type in $fileTypes) {
+        if ($path -like $type) {
+            $isValidFile = $true
+            break
+        }
     }
     
-    # Crea un nuovo timer
-    $script:timer = New-Object System.Timers.Timer
-    $script:timer.Interval = $debounceSeconds * 1000
-    $script:timer.AutoReset = $false
+    if (-not $isValidFile) {
+        Write-ColorLog "File non monitorato: $path" "Gray"
+        return
+    }
     
-    # Evento che viene triggerato quando il timer scade
-    $script:timer.Add_Elapsed({
+    # Debounce: esegui solo se è passato abbastanza tempo dall'ultima modifica
+    if (($now - $lastChange).TotalSeconds -ge $debounceSeconds) {
+        $script:lastChange = $now
+        
+        Write-ColorLog "$changeType rilevato: $path" "Yellow"
+        
         try {
-            $relativePath = $path.Replace($projectDir, '').TrimStart('\')
-            Write-ColorLog "Modifiche rilevate in: $relativePath" "Yellow"
-            
-            # Esegui lo script di auto-commit
-            $scriptPath = Join-Path $projectDir "auto-git.ps1"
-            if (Test-Path $scriptPath) {
+            # Esegui auto-git.ps1
+            $autoGitPath = Join-Path $projectDir "auto-git.ps1"
+            if (Test-Path $autoGitPath) {
                 Write-ColorLog "Esecuzione auto-git.ps1..." "Cyan"
-                & $scriptPath
+                & $autoGitPath
                 if ($LASTEXITCODE -eq 0) {
-                    Write-ColorLog "Auto-commit completato con successo" "Green"
+                    Write-ColorLog "Auto-git.ps1 completato con successo" "Green"
                 } else {
-                    Write-ColorLog "Errore durante l'auto-commit" "Red"
+                    Write-ColorLog "Auto-git.ps1 fallito con codice $LASTEXITCODE" "Red"
                 }
             } else {
-                Write-ColorLog "Script auto-git.ps1 non trovato!" "Red"
+                Write-ColorLog "auto-git.ps1 non trovato in: $autoGitPath" "Red"
             }
         }
         catch {
-            Write-ColorLog "Errore durante l'elaborazione delle modifiche: $_" "Red"
+            Write-ColorLog "Errore durante l'esecuzione di auto-git.ps1: $_" "Red"
             Write-ColorLog $_.ScriptStackTrace "Red"
         }
-        finally {
-            $script:timer.Stop()
-            $script:timer.Dispose()
-        }
-    })
-    
-    # Avvia il timer
-    $script:timer.Start()
+    }
 }
 
-# Registra gli eventi per le modifiche ai file
-$handlers = @(
-    @{
-        Name = 'Created'
-        Action = { Invoke-FileChangeHandler 'Created' $Event.SourceEventArgs.FullPath }
-    }
-    @{
-        Name = 'Changed'
-        Action = { Invoke-FileChangeHandler 'Modified' $Event.SourceEventArgs.FullPath }
-    }
-    @{
-        Name = 'Deleted'
-        Action = { Invoke-FileChangeHandler 'Deleted' $Event.SourceEventArgs.FullPath }
-    }
-    @{
-        Name = 'Renamed'
-        Action = { Invoke-FileChangeHandler 'Renamed' $Event.SourceEventArgs.FullPath }
-    }
-)
+# Crea un FileSystemWatcher per ogni tipo di file
+$watchers = @()
 
-# Registra i gestori degli eventi
-$handlers | ForEach-Object {
-    $name = $_.Name
-    $action = $_.Action
-    Register-ObjectEvent -InputObject $watcher -EventName $name -Action $action | Out-Null
+foreach ($fileType in $fileTypes) {
+    $watcher = New-Object System.IO.FileSystemWatcher
+    $watcher.Path = $projectDir
+    $watcher.Filter = $fileType.TrimStart("*")
+    $watcher.IncludeSubdirectories = $true
+    $watcher.EnableRaisingEvents = $true
+    
+    # Configura i filtri di notifica
+    $watcher.NotifyFilter = [System.IO.NotifyFilters]::FileName -bor 
+                           [System.IO.NotifyFilters]::DirectoryName -bor 
+                           [System.IO.NotifyFilters]::LastWrite
+    
+    # Registra gli eventi
+    $onChange = Register-ObjectEvent $watcher "Changed" -Action {
+        Invoke-FileChange "Modifica" $Event.SourceEventArgs.FullPath
+    }
+    $onCreated = Register-ObjectEvent $watcher "Created" -Action {
+        Invoke-FileChange "Creazione" $Event.SourceEventArgs.FullPath
+    }
+    $onDeleted = Register-ObjectEvent $watcher "Deleted" -Action {
+        Invoke-FileChange "Eliminazione" $Event.SourceEventArgs.FullPath
+    }
+    $onRenamed = Register-ObjectEvent $watcher "Renamed" -Action {
+        Invoke-FileChange "Rinomina" $Event.SourceEventArgs.FullPath
+    }
+    
+    $watchers += @{
+        Watcher = $watcher
+        Events = @($onChange, $onCreated, $onDeleted, $onRenamed)
+    }
+    
+    Write-ColorLog "Monitoraggio avviato per $fileType" "Green"
 }
 
 try {
-    # Esegui auto-git.ps1 all'avvio per gestire eventuali modifiche pendenti
-    Write-ColorLog "Controllo modifiche pendenti..." "Yellow"
-    & (Join-Path $projectDir "auto-git.ps1")
-    
-    Write-ColorLog "Monitoraggio avviato. In attesa di modifiche..." "Green"
+    Write-ColorLog "Monitoraggio attivo. Premi Ctrl+C per terminare." "Cyan"
     while ($true) { Start-Sleep -Seconds 1 }
 }
 finally {
-    # Pulizia quando lo script viene terminato
-    if ($null -ne $timer) {
-        $timer.Stop()
-        $timer.Dispose()
+    # Pulisci i watchers quando lo script viene terminato
+    foreach ($w in $watchers) {
+        $w.Events | ForEach-Object { Unregister-Event $_.Name }
+        $w.Watcher.Dispose()
     }
-    $watcher.EnableRaisingEvents = $false
-    $watcher.Dispose()
-    Get-EventSubscriber | Unregister-Event
-    Write-ColorLog "Monitoraggio terminato" "Cyan"
+    Write-ColorLog "Monitoraggio terminato." "Yellow"
 }

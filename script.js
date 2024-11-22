@@ -38,25 +38,192 @@ let isTimerRunning = false;
 let visitsChart = null;
 let timeDistributionChart = null;
 
-// Inizializzazione
-document.addEventListener('DOMContentLoaded', initializePage);
-
 // Funzione per inizializzare la pagina
 function initializePage() {
-    // Controlla se siamo nella pagina principale
-    if (window.location.pathname.endsWith('index.html') || window.location.pathname.endsWith('/')) {
-        setupForm();
-        setupTimer();
-        setupMotionDetection();
-    }
-    // Se siamo nella pagina delle statistiche
-    else if (window.location.pathname.includes('statistics.html')) {
-        displayRecords();
+    console.log('Inizializzazione pagina...');
+    
+    // Controlla se siamo nella pagina delle statistiche
+    if (window.location.pathname.includes('statistics.html')) {
         updateStatistics();
+        displayRecords();
     }
-    // Se siamo nella pagina dei grafici
+    // Controlla se siamo nella pagina dei grafici
     else if (window.location.pathname.includes('charts.html')) {
+        console.log('Pagina grafici rilevata, inizializzazione grafici...');
         initializeCharts();
+    }
+    // Altrimenti siamo nella pagina principale
+    else {
+        setupForm();
+        setupWaterReminder();
+        setupEventListeners();
+    }
+}
+
+// Funzione per inizializzare i grafici
+function initializeCharts() {
+    console.log('Inizializzazione grafici...');
+    
+    // Recupera i record
+    const records = JSON.parse(localStorage.getItem('poopRecords') || '[]');
+    console.log('Record trovati:', records.length);
+    
+    if (records.length === 0) {
+        console.log('Nessun record trovato per i grafici');
+        document.querySelector('.charts-container').innerHTML = '<p class="no-data">Nessun dato disponibile</p>';
+        return;
+    }
+
+    try {
+        // Grafico visite settimanali
+        const visitsCtx = document.getElementById('visitsChart');
+        console.log('Canvas visite trovato:', !!visitsCtx);
+        
+        if (visitsCtx) {
+            const visits = getLastSevenDaysVisits();
+            console.log('Dati visite:', visits);
+            
+            new Chart(visitsCtx, {
+                type: 'bar',
+                data: {
+                    labels: visits.labels,
+                    datasets: [{
+                        label: 'Visite giornaliere',
+                        data: visits.data,
+                        backgroundColor: 'rgba(75, 192, 192, 0.6)',
+                        borderColor: 'rgba(75, 192, 192, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                stepSize: 1
+                            }
+                        }
+                    }
+                }
+            });
+            console.log('Grafico visite creato');
+        }
+
+        // Grafico distribuzione oraria
+        const timeCtx = document.getElementById('timeDistributionChart');
+        console.log('Canvas distribuzione oraria trovato:', !!timeCtx);
+        
+        if (timeCtx) {
+            const timeDistribution = getTimeDistribution();
+            console.log('Dati distribuzione oraria:', timeDistribution);
+            
+            new Chart(timeCtx, {
+                type: 'line',
+                data: {
+                    labels: Array.from({length: 24}, (_, i) => `${i.toString().padStart(2, '0')}:00`),
+                    datasets: [{
+                        label: 'Visite per ora',
+                        data: timeDistribution,
+                        fill: true,
+                        backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                        borderColor: 'rgba(54, 162, 235, 1)',
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                stepSize: 1
+                            }
+                        }
+                    }
+                }
+            });
+            console.log('Grafico distribuzione oraria creato');
+        }
+
+        // Grafico valutazioni
+        const ratingsCtx = document.getElementById('ratingsChart');
+        console.log('Canvas valutazioni trovato:', !!ratingsCtx);
+        
+        if (ratingsCtx) {
+            const ratings = getRatingsDistribution();
+            console.log('Dati valutazioni:', ratings);
+            
+            new Chart(ratingsCtx, {
+                type: 'pie',
+                data: {
+                    labels: ['⭐', '⭐⭐', '⭐⭐⭐', '⭐⭐⭐⭐', '⭐⭐⭐⭐⭐'],
+                    datasets: [{
+                        data: ratings,
+                        backgroundColor: [
+                            'rgba(255, 99, 132, 0.6)',
+                            'rgba(255, 159, 64, 0.6)',
+                            'rgba(255, 205, 86, 0.6)',
+                            'rgba(75, 192, 192, 0.6)',
+                            'rgba(54, 162, 235, 0.6)'
+                        ]
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom'
+                        }
+                    }
+                }
+            });
+            console.log('Grafico valutazioni creato');
+        }
+
+        // Grafico durata media
+        const durationCtx = document.getElementById('durationChart');
+        console.log('Canvas durata trovato:', !!durationCtx);
+        
+        if (durationCtx) {
+            const durations = getAverageDurationByDay();
+            console.log('Dati durata:', durations);
+            
+            new Chart(durationCtx, {
+                type: 'bar',
+                data: {
+                    labels: ['Dom', 'Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab'],
+                    datasets: [{
+                        label: 'Durata media (minuti)',
+                        data: durations,
+                        backgroundColor: 'rgba(153, 102, 255, 0.6)',
+                        borderColor: 'rgba(153, 102, 255, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                callback: function(value) {
+                                    return value + ' min';
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+            console.log('Grafico durata creato');
+        }
+    } catch (error) {
+        console.error('Errore durante la creazione dei grafici:', error);
+        console.error('Stack trace:', error.stack);
     }
 }
 
@@ -639,196 +806,6 @@ function setupWaterReminder() {
 }
 
 requestMotionPermission();
-
-// Funzione per inizializzare i grafici
-function initializeCharts() {
-    console.log('Inizializzazione grafici...');
-    
-    // Controlla se siamo nella pagina dei grafici
-    if (!window.location.pathname.includes('charts.html')) {
-        console.log('Non siamo nella pagina dei grafici');
-        return;
-    }
-
-    // Recupera i record
-    const records = JSON.parse(localStorage.getItem('poopRecords') || '[]');
-    console.log('Record trovati:', records.length);
-    
-    if (records.length === 0) {
-        console.log('Nessun record trovato per i grafici');
-        document.querySelector('.charts-container').innerHTML = '<p class="no-data">Nessun dato disponibile</p>';
-        return;
-    }
-
-    // Distruggi i grafici esistenti se presenti
-    if (window.visitsChart) {
-        console.log('Distruggo grafico visite esistente');
-        window.visitsChart.destroy();
-    }
-    if (window.timeDistributionChart) {
-        console.log('Distruggo grafico distribuzione oraria esistente');
-        window.timeDistributionChart.destroy();
-    }
-    if (window.ratingsChart) {
-        console.log('Distruggo grafico valutazioni esistente');
-        window.ratingsChart.destroy();
-    }
-    if (window.durationChart) {
-        console.log('Distruggo grafico durata esistente');
-        window.durationChart.destroy();
-    }
-
-    try {
-        // Grafico visite settimanali
-        const visitsCtx = document.getElementById('visitsChart');
-        console.log('Canvas visite trovato:', !!visitsCtx);
-        
-        if (visitsCtx) {
-            const visits = getLastSevenDaysVisits();
-            console.log('Dati visite:', visits);
-            
-            window.visitsChart = new Chart(visitsCtx, {
-                type: 'bar',
-                data: {
-                    labels: visits.labels,
-                    datasets: [{
-                        label: 'Visite giornaliere',
-                        data: visits.data,
-                        backgroundColor: 'rgba(75, 192, 192, 0.6)',
-                        borderColor: 'rgba(75, 192, 192, 1)',
-                        borderWidth: 1
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    scales: {
-                        y: {
-                            beginAtZero: true,
-                            ticks: {
-                                stepSize: 1
-                            }
-                        }
-                    }
-                }
-            });
-            console.log('Grafico visite creato');
-        }
-
-        // Grafico distribuzione oraria
-        const timeCtx = document.getElementById('timeDistributionChart');
-        console.log('Canvas distribuzione oraria trovato:', !!timeCtx);
-        
-        if (timeCtx) {
-            const timeDistribution = getTimeDistribution();
-            console.log('Dati distribuzione oraria:', timeDistribution);
-            
-            window.timeDistributionChart = new Chart(timeCtx, {
-                type: 'line',
-                data: {
-                    labels: Array.from({length: 24}, (_, i) => `${i.toString().padStart(2, '0')}:00`),
-                    datasets: [{
-                        label: 'Visite per ora',
-                        data: timeDistribution,
-                        fill: true,
-                        backgroundColor: 'rgba(54, 162, 235, 0.2)',
-                        borderColor: 'rgba(54, 162, 235, 1)',
-                        tension: 0.4
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    scales: {
-                        y: {
-                            beginAtZero: true,
-                            ticks: {
-                                stepSize: 1
-                            }
-                        }
-                    }
-                }
-            });
-            console.log('Grafico distribuzione oraria creato');
-        }
-
-        // Grafico valutazioni
-        const ratingsCtx = document.getElementById('ratingsChart');
-        console.log('Canvas valutazioni trovato:', !!ratingsCtx);
-        
-        if (ratingsCtx) {
-            const ratings = getRatingsDistribution();
-            console.log('Dati valutazioni:', ratings);
-            
-            window.ratingsChart = new Chart(ratingsCtx, {
-                type: 'pie',
-                data: {
-                    labels: ['⭐', '⭐⭐', '⭐⭐⭐', '⭐⭐⭐⭐', '⭐⭐⭐⭐⭐'],
-                    datasets: [{
-                        data: ratings,
-                        backgroundColor: [
-                            'rgba(255, 99, 132, 0.6)',
-                            'rgba(255, 159, 64, 0.6)',
-                            'rgba(255, 205, 86, 0.6)',
-                            'rgba(75, 192, 192, 0.6)',
-                            'rgba(54, 162, 235, 0.6)'
-                        ]
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: {
-                            position: 'bottom'
-                        }
-                    }
-                }
-            });
-            console.log('Grafico valutazioni creato');
-        }
-
-        // Grafico durata media
-        const durationCtx = document.getElementById('durationChart');
-        console.log('Canvas durata trovato:', !!durationCtx);
-        
-        if (durationCtx) {
-            const durations = getAverageDurationByDay();
-            console.log('Dati durata:', durations);
-            
-            window.durationChart = new Chart(durationCtx, {
-                type: 'bar',
-                data: {
-                    labels: ['Dom', 'Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab'],
-                    datasets: [{
-                        label: 'Durata media (minuti)',
-                        data: durations,
-                        backgroundColor: 'rgba(153, 102, 255, 0.6)',
-                        borderColor: 'rgba(153, 102, 255, 1)',
-                        borderWidth: 1
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    scales: {
-                        y: {
-                            beginAtZero: true,
-                            ticks: {
-                                callback: function(value) {
-                                    return value + ' min';
-                                }
-                            }
-                        }
-                    }
-                }
-            });
-            console.log('Grafico durata creato');
-        }
-    } catch (error) {
-        console.error('Errore durante la creazione dei grafici:', error);
-    }
-}
 
 // Funzioni helper per i dati dei grafici
 function getLastSevenDaysVisits() {
