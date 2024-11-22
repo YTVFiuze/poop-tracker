@@ -1,3 +1,13 @@
+// Variabili globali per il rilevamento dello scuotimento
+let lastX = null;
+let lastY = null;
+let lastZ = null;
+let lastUpdate = 0;
+const shakeThreshold = 5; // Ridotto per maggiore sensibilità
+let isShaking = false;
+let shakeTimeout;
+let debugMode = true;
+
 // Carica i record salvati dal localStorage quando la pagina si carica
 document.addEventListener('DOMContentLoaded', () => {
     displayRecords();
@@ -9,16 +19,6 @@ document.addEventListener('DOMContentLoaded', () => {
     // Imposta l'ora corrente come default
     const now = new Date().toTimeString().slice(0,5);
     document.getElementById('time').value = now;
-    
-    // Variabili per il rilevamento dello scuotimento
-    let lastX = null;
-    let lastY = null;
-    let lastZ = null;
-    let lastUpdate = 0;
-    const shakeThreshold = 5; // Ridotto per maggiore sensibilità
-    let isShaking = false;
-    let shakeTimeout;
-    let debugMode = true;
 
     // Funzione per il debug
     function updateDebugInfo(message) {
