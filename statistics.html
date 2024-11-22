@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Statistiche - Poop Tracker</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <div class="container">
+        <nav class="navigation">
+            <a href="index.html" class="btn btn-back">← Torna alla Home</a>
+        </nav>
+
+        <h1>Statistiche</h1>
+
+        <div class="statistics-container">
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <h3>Visite Totali</h3>
+                    <p id="totalVisits">0</p>
+                </div>
+                <div class="stat-card">
+                    <h3>Media Giornaliera</h3>
+                    <p id="dailyAverage">0</p>
+                </div>
+                <div class="stat-card">
+                    <h3>Durata Media</h3>
+                    <p id="averageDuration">0 min</p>
+                </div>
+                <div class="stat-card">
+                    <h3>Valutazione Media</h3>
+                    <p id="averageRating">0 ⭐</p>
+                </div>
+            </div>
+
+            <div class="charts-container">
+                <div class="chart-wrapper">
+                    <h3>Visite per Giorno</h3>
+                    <canvas id="visitsChart"></canvas>
+                </div>
+                <div class="chart-wrapper">
+                    <h3>Distribuzione Oraria</h3>
+                    <canvas id="timeDistributionChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div class="records-container">
+            <h2>Storico Visite</h2>
+            <div id="records"></div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>

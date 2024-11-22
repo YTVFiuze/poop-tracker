@@ -12,8 +12,12 @@
 </head>
 <body>
     <div class="container">
-        <h1> Poop Tracker</h1>
+        <h1>Poop Tracker</h1>
         
+        <nav class="navigation">
+            <a href="statistics.html" class="btn btn-stats">📊 Visualizza Statistiche</a>
+        </nav>
+
         <div class="shake-instructions">
             <h2>Come Usare</h2>
             <p>Scuoti il telefono quando hai finito in bagno per registrare automaticamente una visita!</p>
@@ -30,7 +34,7 @@
                 <input type="time" id="time" required>
             </div>
             <div class="form-group">
-                <label for="duration">Durata (minuti):</label>
+                <label for="duration">Durata:</label>
                 <div class="duration-input-wrapper">
                     <input type="number" id="duration" min="1" value="5">
                 </div>
@@ -60,54 +64,17 @@
                 <label for="notes">Note (opzionale):</label>
                 <textarea id="notes" rows="3" placeholder="Aggiungi note sulla tua visita..."></textarea>
             </div>
-            <button type="submit" class="btn">Registra Visita</button>
+            <button type="submit" class="btn btn-primary">Registra Visita</button>
         </form>
-
-        <div class="statistics-container">
-            <h2>Statistiche</h2>
-            <div class="stats-grid">
-                <div class="stat-card">
-                    <h3>Visite Totali</h3>
-                    <p id="totalVisits">0</p>
-                </div>
-                <div class="stat-card">
-                    <h3>Media Giornaliera</h3>
-                    <p id="dailyAverage">0</p>
-                </div>
-                <div class="stat-card">
-                    <h3>Durata Media</h3>
-                    <p id="averageDuration">0 min</p>
-                </div>
-                <div class="stat-card">
-                    <h3>Valutazione Media</h3>
-                    <p id="averageRating">0 ⭐</p>
-                </div>
-            </div>
-            <div class="charts-container">
-                <div class="chart-wrapper">
-                    <h3>Visite per Giorno</h3>
-                    <canvas id="visitsChart"></canvas>
-                </div>
-                <div class="chart-wrapper">
-                    <h3>Distribuzione Oraria</h3>
-                    <canvas id="timeDistributionChart"></canvas>
-                </div>
-            </div>
-        </div>
 
         <div class="health-tips">
             <h2>Consigli per la Salute</h2>
             <div id="dailyTip" class="tip-card"></div>
             <button id="waterReminder" class="btn reminder-btn">Attiva Promemoria Acqua</button>
         </div>
-
-        <div class="records-container">
-            <h2>Visite Registrate</h2>
-            <div id="records"></div>
-        </div>
     </div>
 
-    <div id="permissionPopup" class="permission-popup" style="display: none;">
+    <div id="permissionPopup" class="popup" style="display: none;">
         <div class="popup-content">
             <h3>Permesso Richiesto</h3>
             <p>Per utilizzare la funzione di rilevamento del movimento, è necessario concedere l'accesso al sensore di movimento del dispositivo.</p>
@@ -116,10 +83,12 @@
     </div>
 
     <div id="timerPopup" class="timer-popup" style="display: none;">
-        <div class="popup-content">
-            <h3>Timer</h3>
+        <div class="timer-content">
+            <h3>Timer Visita</h3>
             <div id="timer">00:00</div>
-            <button id="stopTimer" class="btn">Stop</button>
+            <div class="timer-controls">
+                <button id="stopTimer" class="btn">Termina</button>
+            </div>
         </div>
     </div>
 
