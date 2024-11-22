@@ -8,6 +8,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
     <div class="container">
@@ -29,11 +30,74 @@
                 <input type="time" id="time" required>
             </div>
             <div class="form-group">
+                <label for="duration">Durata (minuti):</label>
+                <input type="number" id="duration" min="1" value="5">
+            </div>
+            <div class="form-group">
+                <label for="rating">Valutazione:</label>
+                <div class="rating-container">
+                    <span class="star" data-rating="1">⭐</span>
+                    <span class="star" data-rating="2">⭐</span>
+                    <span class="star" data-rating="3">⭐</span>
+                    <span class="star" data-rating="4">⭐</span>
+                    <span class="star" data-rating="5">⭐</span>
+                </div>
+                <input type="hidden" id="rating" value="3">
+            </div>
+            <div class="form-group">
+                <label for="mood">Stato d'animo:</label>
+                <div class="mood-container">
+                    <span class="mood" data-mood="😊">😊</span>
+                    <span class="mood" data-mood="😐">😐</span>
+                    <span class="mood" data-mood="😫">😫</span>
+                    <span class="mood" data-mood="😱">😱</span>
+                </div>
+                <input type="hidden" id="mood" value="😊">
+            </div>
+            <div class="form-group">
                 <label for="notes">Note (opzionale):</label>
                 <textarea id="notes" rows="3" placeholder="Aggiungi note sulla tua visita..."></textarea>
             </div>
             <button type="submit" class="btn">Registra Visita</button>
         </form>
+
+        <div class="statistics-container">
+            <h2>Statistiche</h2>
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <h3>Visite Totali</h3>
+                    <p id="totalVisits">0</p>
+                </div>
+                <div class="stat-card">
+                    <h3>Media Giornaliera</h3>
+                    <p id="dailyAverage">0</p>
+                </div>
+                <div class="stat-card">
+                    <h3>Durata Media</h3>
+                    <p id="averageDuration">0 min</p>
+                </div>
+                <div class="stat-card">
+                    <h3>Valutazione Media</h3>
+                    <p id="averageRating">0 ⭐</p>
+                </div>
+            </div>
+            <div class="charts-container">
+                <div class="chart-wrapper">
+                    <h3>Visite per Giorno</h3>
+                    <canvas id="visitsChart"></canvas>
+                </div>
+                <div class="chart-wrapper">
+                    <h3>Distribuzione Oraria</h3>
+                    <canvas id="timeDistributionChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div class="health-tips">
+            <h2>Consigli per la Salute</h2>
+            <div id="dailyTip" class="tip-card"></div>
+            <button id="waterReminder" class="btn reminder-btn">Attiva Promemoria Acqua</button>
+        </div>
 
         <div class="records-container">
             <h2>Visite Registrate</h2>
@@ -46,6 +110,14 @@
             <h3>Permesso Richiesto</h3>
             <p>Per utilizzare la funzione di rilevamento del movimento, è necessario concedere l'accesso al sensore di movimento del dispositivo.</p>
             <button id="grantPermission" class="btn">Concedi Permesso</button>
+        </div>
+    </div>
+
+    <div id="timerPopup" class="timer-popup" style="display: none;">
+        <div class="popup-content">
+            <h3>Timer</h3>
+            <div id="timer">00:00</div>
+            <button id="stopTimer" class="btn">Stop</button>
         </div>
     </div>
 
