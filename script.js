@@ -3,7 +3,10 @@ let lastX = null;
 let lastY = null;
 let lastZ = null;
 let lastUpdate = 0;
-const shakeThreshold = 5; // Ridotto per maggiore sensibilità
+const shakeThreshold = 15; // Aumentato per richiedere più movimento
+const minShakeDuration = 500; // Minimo mezzo secondo di movimento
+let shakeStartTime = 0;
+let consecutiveShakes = 0;
 let isShaking = false;
 let shakeTimeout;
 let debugMode = true;
@@ -28,7 +31,9 @@ function handleShake(event) {
     const currentTime = new Date().getTime();
 
     // Mostra sempre i valori dell'accelerometro
-    updateDebugInfo(`X: ${Math.round(current.x)} Y: ${Math.round(current.y)} Z: ${Math.round(current.z)}`);
+    if (debugMode) {
+        updateDebugInfo(`X: ${Math.round(current.x)} Y: ${Math.round(current.y)} Z: ${Math.round(current.z)}`);
+    }
 
     if (lastX === null) {
         lastX = current.x;
@@ -39,42 +44,59 @@ function handleShake(event) {
     }
 
     const timeDiff = currentTime - lastUpdate;
-    if (timeDiff > 50) { // Ridotto a 50ms per maggiore reattività
+    if (timeDiff > 50) { // Controlliamo ogni 50ms
         const deltaX = Math.abs(current.x - lastX);
         const deltaY = Math.abs(current.y - lastY);
         const deltaZ = Math.abs(current.z - lastZ);
 
         const movement = Math.max(deltaX, deltaY, deltaZ);
 
-        if (!isShaking && movement > shakeThreshold) {
-            isShaking = true;
-            
-            // Vibra il telefono
-            if ('vibrate' in navigator) {
-                navigator.vibrate(200);
+        if (movement > shakeThreshold) {
+            if (!isShaking) {
+                shakeStartTime = currentTime;
+                isShaking = true;
+                consecutiveShakes = 1;
+            } else {
+                consecutiveShakes++;
             }
 
-            // Registra il record
-            const now = new Date();
-            addRecord(
-                now.toISOString().split('T')[0],
-                now.toTimeString().slice(0,5),
-                `Movimento rilevato! (${movement.toFixed(1)}) 🚽`
-            );
-            displayRecords();
+            // Verifichiamo che il movimento sia durato abbastanza e sia stato abbastanza forte
+            if (consecutiveShakes >= 3 && (currentTime - shakeStartTime) >= minShakeDuration) {
+                // Vibra il telefono
+                if ('vibrate' in navigator) {
+                    navigator.vibrate(200);
+                }
 
-            // Feedback visivo e sonoro
-            updateDebugInfo('🚽 Registrazione in corso...');
-            setTimeout(() => {
-                alert('Record salvato!');
-                updateDebugInfo('In attesa...');
-            }, 500);
+                // Registra il record
+                const now = new Date();
+                addRecord(
+                    now.toISOString().split('T')[0],
+                    now.toTimeString().slice(0,5),
+                    `Movimento forte rilevato! (${movement.toFixed(1)}) 🚽`
+                );
+                displayRecords();
 
-            // Reset dopo 1 secondo
-            clearTimeout(shakeTimeout);
-            shakeTimeout = setTimeout(() => {
+                // Feedback visivo e sonoro
+                updateDebugInfo('🚽 Registrazione in corso...');
+                setTimeout(() => {
+                    alert('Record salvato!');
+                    updateDebugInfo('In attesa di movimento...');
+                }, 500);
+
+                // Reset dopo 2 secondi per evitare registrazioni multiple
+                clearTimeout(shakeTimeout);
+                shakeTimeout = setTimeout(() => {
+                    isShaking = false;
+                    consecutiveShakes = 0;
+                    shakeStartTime = 0;
+                }, 2000);
+            }
+        } else {
+            // Se il movimento è troppo debole, resettiamo il conteggio
+            if (currentTime - lastUpdate > 1000) {
+                consecutiveShakes = 0;
                 isShaking = false;
-            }, 1000);
+            }
         }
 
         lastX = current.x;
