@@ -1,4 +1,4 @@
-# Script per automatizzare gli aggiornamenti Git
+# Script per automatizzare i commit Git
 $ErrorActionPreference = "Stop"
 
 # Funzione per ottenere un timestamp formattato
@@ -15,43 +15,72 @@ function Write-ColorLog {
     Write-Host "[$((Get-FormattedTimestamp))] $Message" -ForegroundColor $Color
 }
 
-# Directory del progetto
-$projectDir = Split-Path -Parent $MyInvocation.MyCommand.Path
-
 try {
-    # Vai alla directory del progetto
-    Set-Location $projectDir
-    Write-ColorLog "Directory di lavoro: $projectDir" "Cyan"
+    # Controlla se siamo in un repository Git
+    if (-not (Test-Path ".git")) {
+        throw "Non sei in un repository Git"
+    }
+
+    # Controlla se Git è installato
+    if (-not (Get-Command "git" -ErrorAction SilentlyContinue)) {
+        throw "Git non è installato nel sistema"
+    }
+
+    # Controlla se il remote è configurato
+    $remote = git remote -v
+    if (-not $remote) {
+        throw "Nessun remote configurato"
+    }
+
+    Write-ColorLog "Repository Git trovato e configurato correttamente" "Green"
 
     # Controlla se ci sono modifiche
     $status = git status --porcelain
     if ($status) {
-        Write-ColorLog "Modifiche rilevate. Avvio processo di commit..." "Yellow"
-
-        # Stage di tutte le modifiche
+        Write-ColorLog "Modifiche rilevate" "Yellow"
+        
+        # Configura le credenziali per GitHub
+        git config --global credential.helper store
+        
+        # Configura l'utente se non è già configurato
+        $userName = git config --global user.name
+        $userEmail = git config --global user.email
+        
+        if (-not $userName) {
+            Write-ColorLog "Configurazione nome utente Git..." "Yellow"
+            git config --global user.name "YTVFiuze"
+        }
+        
+        if (-not $userEmail) {
+            Write-ColorLog "Configurazione email Git..." "Yellow"
+            git config --global user.email "ytv.fiuze@gmail.com"
+        }
+        
+        # Aggiungi tutte le modifiche
         git add .
-        if ($LASTEXITCODE -ne 0) { throw "Errore durante git add" }
-        Write-ColorLog "Stage delle modifiche completato" "Green"
-
+        Write-ColorLog "File aggiunti all'area di staging" "Green"
+        
         # Crea il commit con timestamp
-        $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm"
-        $commitMessage = "Auto-commit: Aggiornamento $timestamp`n`nModifiche automaticamente committate dallo script di auto-update"
-        git commit -m $commitMessage
-        if ($LASTEXITCODE -ne 0) { throw "Errore durante git commit" }
-        Write-ColorLog "Commit creato con successo" "Green"
-
-        # Push delle modifiche
-        git push
-        if ($LASTEXITCODE -ne 0) { throw "Errore durante git push" }
-        Write-ColorLog "Push completato con successo" "Green"
-
-        Write-ColorLog "Processo completato con successo!" "Cyan"
+        $timestamp = Get-FormattedTimestamp
+        git commit -m "Auto commit: $timestamp"
+        Write-ColorLog "Commit creato" "Green"
+        
+        # Push delle modifiche con output dettagliato
+        Write-ColorLog "Tentativo di push..." "Yellow"
+        $pushOutput = git push origin main 2>&1
+        if ($LASTEXITCODE -eq 0) {
+            Write-ColorLog "Push completato con successo" "Green"
+        } else {
+            Write-ColorLog "Errore durante il push: $pushOutput" "Red"
+            throw "Push fallito"
+        }
     }
     else {
-        Write-ColorLog "Nessuna modifica rilevata" "Yellow"
+        Write-ColorLog "Nessuna modifica rilevata" "Cyan"
     }
 }
 catch {
     Write-ColorLog "Errore: $_" "Red"
+    Write-ColorLog "Stack trace: $($_.ScriptStackTrace)" "Red"
     exit 1
 }

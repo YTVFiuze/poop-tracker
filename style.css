@@ -210,8 +210,14 @@ h2 {
 .chart-wrapper {
     background: #fff;
     border-radius: 12px;
-    padding: 15px;
+    padding: 20px;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s ease;
+}
+
+.chart-wrapper:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
 .chart-wrapper h3 {
@@ -219,6 +225,7 @@ h2 {
     color: #333;
     font-size: 1.1rem;
     text-align: center;
+    font-weight: 500;
 }
 
 .chart-wrapper canvas {
@@ -233,6 +240,10 @@ h2 {
     
     .chart-wrapper canvas {
         height: 250px !important;
+    }
+    
+    .chart-wrapper {
+        padding: 15px;
     }
 }
 
@@ -277,15 +288,8 @@ h2 {
     color: var(--primary-color);
 }
 
-/* Stili per il pulsante Visualizza Grafici */
-.statistics-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 20px;
-}
-
-.view-charts-btn {
+/* Stili per i pulsanti di navigazione */
+.back-btn {
     display: flex;
     align-items: center;
     gap: 8px;
@@ -294,11 +298,49 @@ h2 {
     color: white;
     border-radius: 20px;
     text-decoration: none;
-    transition: background-color 0.3s;
+    transition: all 0.3s ease;
+    border: none;
+    cursor: pointer;
+    font-weight: 500;
+}
+
+.back-btn:hover {
+    background: var(--primary-dark);
+    transform: translateX(-3px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.back-btn span {
+    font-size: 24px;
+}
+
+/* Stili per il pulsante Visualizza Grafici */
+.statistics-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    padding: 0 20px;
+}
+
+.view-charts-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 20px;
+    background: var(--primary-color);
+    color: white;
+    border-radius: 25px;
+    text-decoration: none;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    font-weight: 500;
 }
 
 .view-charts-btn:hover {
     background: var(--primary-dark);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
 }
 
 .view-charts-btn .material-icons {

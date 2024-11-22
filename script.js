@@ -59,7 +59,6 @@ function initializePage() {
     if (window.location.pathname.includes('statistics.html')) {
         displayRecords();
         updateStatistics();
-        setupCharts();
     }
 }
 
@@ -205,124 +204,6 @@ function getTimeDistribution() {
         labels: Array.from({length: 24}, (_, i) => `${i.toString().padStart(2, '0')}:00`),
         data: hourlyDistribution
     };
-}
-
-// Setup dei grafici
-function setupCharts() {
-    const visitsChartCanvas = document.getElementById('visitsChart');
-    const timeDistributionChartCanvas = document.getElementById('timeDistributionChart');
-    
-    if (!visitsChartCanvas || !timeDistributionChartCanvas) {
-        console.error('Canvas dei grafici non trovati');
-        return;
-    }
-    
-    // Distruggi i grafici esistenti se presenti
-    if (visitsChart) visitsChart.destroy();
-    if (timeDistributionChart) timeDistributionChart.destroy();
-    
-    // Dati per il grafico delle visite
-    const visitsData = getVisitsData();
-    
-    // Crea il grafico delle visite
-    visitsChart = new Chart(visitsChartCanvas, {
-        type: 'bar',
-        data: {
-            labels: visitsData.labels,
-            datasets: [{
-                label: 'Visite',
-                data: visitsData.data,
-                backgroundColor: 'rgba(108, 99, 255, 0.7)',
-                borderColor: 'rgb(108, 99, 255)',
-                borderWidth: 2,
-                borderRadius: 8,
-                hoverBackgroundColor: 'rgba(108, 99, 255, 0.9)'
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: {
-                    display: false
-                },
-                tooltip: {
-                    backgroundColor: 'rgba(255, 255, 255, 0.9)',
-                    titleColor: '#2c3e50',
-                    bodyColor: '#2c3e50',
-                    borderColor: 'rgba(108, 99, 255, 0.3)',
-                    borderWidth: 1,
-                    padding: 12,
-                    displayColors: false,
-                    callbacks: {
-                        title: (items) => `${items[0].label}`,
-                        label: (item) => `${item.formattedValue} visite`
-                    }
-                }
-            },
-            scales: {
-                y: {
-                    beginAtZero: true,
-                    ticks: {
-                        stepSize: 1
-                    }
-                }
-            }
-        }
-    });
-    
-    // Dati per il grafico della distribuzione oraria
-    const timeData = getTimeDistribution();
-    
-    // Crea il grafico della distribuzione oraria
-    timeDistributionChart = new Chart(timeDistributionChartCanvas, {
-        type: 'line',
-        data: {
-            labels: timeData.labels,
-            datasets: [{
-                label: 'Visite',
-                data: timeData.data,
-                backgroundColor: 'rgba(255, 107, 107, 0.2)',
-                borderColor: 'rgb(255, 107, 107)',
-                borderWidth: 2,
-                pointBackgroundColor: 'rgb(255, 107, 107)',
-                pointRadius: 4,
-                pointHoverRadius: 6,
-                fill: true,
-                tension: 0.4
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: {
-                    display: false
-                },
-                tooltip: {
-                    backgroundColor: 'rgba(255, 255, 255, 0.9)',
-                    titleColor: '#2c3e50',
-                    bodyColor: '#2c3e50',
-                    borderColor: 'rgba(255, 107, 107, 0.3)',
-                    borderWidth: 1,
-                    padding: 12,
-                    displayColors: false,
-                    callbacks: {
-                        title: (items) => `Ora: ${items[0].label}`,
-                        label: (item) => `${item.formattedValue} visite`
-                    }
-                }
-            },
-            scales: {
-                y: {
-                    beginAtZero: true,
-                    ticks: {
-                        stepSize: 1
-                    }
-                }
-            }
-        }
-    });
 }
 
 // Aggiorna le statistiche
@@ -760,3 +641,187 @@ function setupWaterReminder() {
 }
 
 requestMotionPermission();
+
+// Funzione per inizializzare i grafici nella pagina charts.html
+function initializeCharts() {
+    if (window.location.pathname.endsWith('charts.html')) {
+        // Grafico visite settimanali
+        const visitsCtx = document.getElementById('visitsChart').getContext('2d');
+        const visits = getLastSevenDaysVisits();
+        new Chart(visitsCtx, {
+            type: 'bar',
+            data: {
+                labels: visits.labels,
+                datasets: [{
+                    label: 'Visite giornaliere',
+                    data: visits.data,
+                    backgroundColor: 'rgba(75, 192, 192, 0.6)',
+                    borderColor: 'rgba(75, 192, 192, 1)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            stepSize: 1
+                        }
+                    }
+                }
+            }
+        });
+
+        // Grafico distribuzione oraria
+        const timeCtx = document.getElementById('timeDistributionChart').getContext('2d');
+        const timeDistribution = getTimeDistribution();
+        new Chart(timeCtx, {
+            type: 'line',
+            data: {
+                labels: Array.from({length: 24}, (_, i) => `${i}:00`),
+                datasets: [{
+                    label: 'Visite per ora',
+                    data: timeDistribution,
+                    fill: true,
+                    backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                    borderColor: 'rgba(54, 162, 235, 1)',
+                    tension: 0.4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            stepSize: 1
+                        }
+                    }
+                }
+            }
+        });
+
+        // Grafico valutazioni
+        const ratingsCtx = document.getElementById('ratingsChart').getContext('2d');
+        const ratings = getRatingsDistribution();
+        new Chart(ratingsCtx, {
+            type: 'pie',
+            data: {
+                labels: ['⭐', '⭐⭐', '⭐⭐⭐', '⭐⭐⭐⭐', '⭐⭐⭐⭐⭐'],
+                datasets: [{
+                    data: ratings,
+                    backgroundColor: [
+                        'rgba(255, 99, 132, 0.6)',
+                        'rgba(255, 159, 64, 0.6)',
+                        'rgba(255, 205, 86, 0.6)',
+                        'rgba(75, 192, 192, 0.6)',
+                        'rgba(54, 162, 235, 0.6)'
+                    ]
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false
+            }
+        });
+
+        // Grafico durata media
+        const durationCtx = document.getElementById('durationChart').getContext('2d');
+        const durations = getAverageDurationByDay();
+        new Chart(durationCtx, {
+            type: 'bar',
+            data: {
+                labels: ['Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab', 'Dom'],
+                datasets: [{
+                    label: 'Durata media (minuti)',
+                    data: durations,
+                    backgroundColor: 'rgba(153, 102, 255, 0.6)',
+                    borderColor: 'rgba(153, 102, 255, 1)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+    }
+}
+
+// Funzioni helper per i dati dei grafici
+function getLastSevenDaysVisits() {
+    const records = getRecords();
+    const last7Days = Array.from({length: 7}, (_, i) => {
+        const d = new Date();
+        d.setDate(d.getDate() - i);
+        return d.toISOString().split('T')[0];
+    }).reverse();
+    
+    const counts = last7Days.map(date => 
+        records.filter(r => r.date.startsWith(date)).length
+    );
+    
+    return {
+        labels: last7Days.map(date => {
+            const [y, m, d] = date.split('-');
+            return `${d}/${m}`;
+        }),
+        data: counts
+    };
+}
+
+function getTimeDistribution() {
+    const records = getRecords();
+    const distribution = Array(24).fill(0);
+    
+    records.forEach(record => {
+        const hour = new Date(record.date).getHours();
+        distribution[hour]++;
+    });
+    
+    return distribution;
+}
+
+function getRatingsDistribution() {
+    const records = getRecords();
+    const distribution = Array(5).fill(0);
+    
+    records.forEach(record => {
+        if (record.rating) {
+            distribution[record.rating - 1]++;
+        }
+    });
+    
+    return distribution;
+}
+
+function getAverageDurationByDay() {
+    const records = getRecords();
+    const durationsByDay = Array(7).fill([]);
+    
+    records.forEach(record => {
+        const day = new Date(record.date).getDay();
+        const duration = record.duration || 0;
+        durationsByDay[day] = [...durationsByDay[day], duration];
+    });
+    
+    return durationsByDay.map(durations => {
+        if (durations.length === 0) return 0;
+        const avg = durations.reduce((a, b) => a + b, 0) / durations.length;
+        return Math.round(avg);
+    });
+}
+
+// Aggiungi l'inizializzazione dei grafici all'avvio della pagina
+document.addEventListener('DOMContentLoaded', () => {
+    initializePage();
+    initializeCharts();
+});
