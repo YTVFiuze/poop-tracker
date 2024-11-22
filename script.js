@@ -8,6 +8,82 @@ let isShaking = false;
 let shakeTimeout;
 let debugMode = true;
 
+// Funzione per il debug
+function updateDebugInfo(message) {
+    const shakeStatus = document.getElementById('shake-status');
+    if (shakeStatus) {
+        shakeStatus.textContent = message;
+        console.log(message);
+    }
+}
+
+// Gestisce l'evento di scuotimento
+function handleShake(event) {
+    if (!event.accelerationIncludingGravity) {
+        updateDebugInfo('No accelerometer data');
+        return;
+    }
+
+    const current = event.accelerationIncludingGravity;
+    const currentTime = new Date().getTime();
+
+    // Mostra sempre i valori dell'accelerometro
+    updateDebugInfo(`X: ${Math.round(current.x)} Y: ${Math.round(current.y)} Z: ${Math.round(current.z)}`);
+
+    if (lastX === null) {
+        lastX = current.x;
+        lastY = current.y;
+        lastZ = current.z;
+        lastUpdate = currentTime;
+        return;
+    }
+
+    const timeDiff = currentTime - lastUpdate;
+    if (timeDiff > 50) { // Ridotto a 50ms per maggiore reattività
+        const deltaX = Math.abs(current.x - lastX);
+        const deltaY = Math.abs(current.y - lastY);
+        const deltaZ = Math.abs(current.z - lastZ);
+
+        const movement = Math.max(deltaX, deltaY, deltaZ);
+
+        if (!isShaking && movement > shakeThreshold) {
+            isShaking = true;
+            
+            // Vibra il telefono
+            if ('vibrate' in navigator) {
+                navigator.vibrate(200);
+            }
+
+            // Registra il record
+            const now = new Date();
+            addRecord(
+                now.toISOString().split('T')[0],
+                now.toTimeString().slice(0,5),
+                `Movimento rilevato! (${movement.toFixed(1)}) 🚽`
+            );
+            displayRecords();
+
+            // Feedback visivo e sonoro
+            updateDebugInfo('🚽 Registrazione in corso...');
+            setTimeout(() => {
+                alert('Record salvato!');
+                updateDebugInfo('In attesa...');
+            }, 500);
+
+            // Reset dopo 1 secondo
+            clearTimeout(shakeTimeout);
+            shakeTimeout = setTimeout(() => {
+                isShaking = false;
+            }, 1000);
+        }
+
+        lastX = current.x;
+        lastY = current.y;
+        lastZ = current.z;
+        lastUpdate = currentTime;
+    }
+}
+
 // Carica i record salvati dal localStorage quando la pagina si carica
 document.addEventListener('DOMContentLoaded', () => {
     displayRecords();
@@ -19,13 +95,6 @@ document.addEventListener('DOMContentLoaded', () => {
     // Imposta l'ora corrente come default
     const now = new Date().toTimeString().slice(0,5);
     document.getElementById('time').value = now;
-
-    // Funzione per il debug
-    function updateDebugInfo(message) {
-        const shakeStatus = document.getElementById('shake-status');
-        shakeStatus.textContent = message;
-        console.log(message);
-    }
 
     // Richiedi il permesso per l'accelerometro
     async function requestDeviceMotion() {
@@ -199,71 +268,4 @@ function displayRecords() {
 function formatDate(dateStr) {
     const [year, month, day] = dateStr.split('-');
     return `${day}/${month}/${year}`;
-}
-
-// Gestisce l'evento di scuotimento
-function handleShake(event) {
-    if (!event.accelerationIncludingGravity) {
-        updateDebugInfo('No accelerometer data');
-        return;
-    }
-
-    const current = event.accelerationIncludingGravity;
-    const currentTime = new Date().getTime();
-
-    // Mostra sempre i valori dell'accelerometro
-    updateDebugInfo(`X: ${Math.round(current.x)} Y: ${Math.round(current.y)} Z: ${Math.round(current.z)}`);
-
-    if (lastX === null) {
-        lastX = current.x;
-        lastY = current.y;
-        lastZ = current.z;
-        lastUpdate = currentTime;
-        return;
-    }
-
-    const timeDiff = currentTime - lastUpdate;
-    if (timeDiff > 50) { // Ridotto a 50ms per maggiore reattività
-        const deltaX = Math.abs(current.x - lastX);
-        const deltaY = Math.abs(current.y - lastY);
-        const deltaZ = Math.abs(current.z - lastZ);
-
-        const movement = Math.max(deltaX, deltaY, deltaZ);
-
-        if (!isShaking && movement > shakeThreshold) {
-            isShaking = true;
-            
-            // Vibra il telefono
-            if ('vibrate' in navigator) {
-                navigator.vibrate(200);
-            }
-
-            // Registra il record
-            const now = new Date();
-            addRecord(
-                now.toISOString().split('T')[0],
-                now.toTimeString().slice(0,5),
-                `Movimento rilevato! (${movement.toFixed(1)}) `
-            );
-            displayRecords();
-
-            // Feedback visivo e sonoro
-            updateDebugInfo(' Registrazione in corso...');
-            setTimeout(() => {
-                alert('Record salvato!');
-                updateDebugInfo('In attesa...');
-            }, 500);
-
-            // Reset dopo 1 secondo
-            clearTimeout(shakeTimeout);
-            shakeTimeout = setTimeout(() => {
-                isShaking = false;
-            }, 1000);
-        }
-
-        lastX = current.x;
-        lastY = current.y;
-        lastZ = current.z;
-        lastUpdate = currentTime;
-    }
 }
