@@ -642,17 +642,30 @@ requestMotionPermission();
 
 // Funzione per inizializzare i grafici
 function initializeCharts() {
-    const records = getRecords();
-    if (!records || records.length === 0) {
-        console.log('Nessun record trovato per i grafici');
+    // Controlla se siamo nella pagina dei grafici
+    if (!window.location.pathname.includes('charts.html')) {
         return;
     }
+
+    // Recupera i record
+    const records = JSON.parse(localStorage.getItem('poopRecords') || '[]');
+    if (records.length === 0) {
+        console.log('Nessun record trovato per i grafici');
+        document.querySelector('.charts-container').innerHTML = '<p class="no-data">Nessun dato disponibile</p>';
+        return;
+    }
+
+    // Distruggi i grafici esistenti se presenti
+    if (window.visitsChart) visitsChart.destroy();
+    if (window.timeDistributionChart) timeDistributionChart.destroy();
+    if (window.ratingsChart) ratingsChart.destroy();
+    if (window.durationChart) durationChart.destroy();
 
     // Grafico visite settimanali
     const visitsCtx = document.getElementById('visitsChart');
     if (visitsCtx) {
         const visits = getLastSevenDaysVisits();
-        new Chart(visitsCtx, {
+        window.visitsChart = new Chart(visitsCtx, {
             type: 'bar',
             data: {
                 labels: visits.labels,
@@ -683,7 +696,7 @@ function initializeCharts() {
     const timeCtx = document.getElementById('timeDistributionChart');
     if (timeCtx) {
         const timeDistribution = getTimeDistribution();
-        new Chart(timeCtx, {
+        window.timeDistributionChart = new Chart(timeCtx, {
             type: 'line',
             data: {
                 labels: Array.from({length: 24}, (_, i) => `${i}:00`),
@@ -715,7 +728,7 @@ function initializeCharts() {
     const ratingsCtx = document.getElementById('ratingsChart');
     if (ratingsCtx) {
         const ratings = getRatingsDistribution();
-        new Chart(ratingsCtx, {
+        window.ratingsChart = new Chart(ratingsCtx, {
             type: 'pie',
             data: {
                 labels: ['⭐', '⭐⭐', '⭐⭐⭐', '⭐⭐⭐⭐', '⭐⭐⭐⭐⭐'],
@@ -746,7 +759,7 @@ function initializeCharts() {
     const durationCtx = document.getElementById('durationChart');
     if (durationCtx) {
         const durations = getAverageDurationByDay();
-        new Chart(durationCtx, {
+        window.durationChart = new Chart(durationCtx, {
             type: 'bar',
             data: {
                 labels: ['Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab', 'Dom'],
@@ -773,7 +786,7 @@ function initializeCharts() {
 
 // Funzioni helper per i dati dei grafici
 function getLastSevenDaysVisits() {
-    const records = getRecords();
+    const records = JSON.parse(localStorage.getItem('poopRecords') || '[]');
     const last7Days = Array.from({length: 7}, (_, i) => {
         const d = new Date();
         d.setDate(d.getDate() - i);
@@ -781,37 +794,42 @@ function getLastSevenDaysVisits() {
     }).reverse();
     
     const counts = last7Days.map(date => 
-        records.filter(r => r.date.startsWith(date)).length
+        records.filter(r => r.date === date).length
     );
     
     return {
         labels: last7Days.map(date => {
-            const [y, m, d] = date.split('-');
-            return `${d}/${m}`;
+            const d = new Date(date);
+            return d.toLocaleDateString('it-IT', { weekday: 'short', day: 'numeric' });
         }),
         data: counts
     };
 }
 
 function getTimeDistribution() {
-    const records = getRecords();
+    const records = JSON.parse(localStorage.getItem('poopRecords') || '[]');
     const distribution = Array(24).fill(0);
     
     records.forEach(record => {
-        const hour = new Date(record.date).getHours();
-        distribution[hour]++;
+        if (record.time) {
+            const hour = parseInt(record.time.split(':')[0]);
+            if (!isNaN(hour) && hour >= 0 && hour < 24) {
+                distribution[hour]++;
+            }
+        }
     });
     
     return distribution;
 }
 
 function getRatingsDistribution() {
-    const records = getRecords();
+    const records = JSON.parse(localStorage.getItem('poopRecords') || '[]');
     const distribution = Array(5).fill(0);
     
     records.forEach(record => {
-        if (record.rating) {
-            distribution[record.rating - 1]++;
+        const rating = parseInt(record.rating);
+        if (!isNaN(rating) && rating >= 1 && rating <= 5) {
+            distribution[rating - 1]++;
         }
     });
     
@@ -819,13 +837,17 @@ function getRatingsDistribution() {
 }
 
 function getAverageDurationByDay() {
-    const records = getRecords();
+    const records = JSON.parse(localStorage.getItem('poopRecords') || '[]');
     const durationsByDay = Array(7).fill(0).map(() => []);
     
     records.forEach(record => {
-        if (record.duration) {
-            const day = new Date(record.date).getDay();
-            durationsByDay[day].push(record.duration);
+        if (record.date && record.duration) {
+            const date = new Date(record.date);
+            const day = date.getDay();
+            const duration = parseInt(record.duration);
+            if (!isNaN(duration) && duration >= 0) {
+                durationsByDay[day].push(duration);
+            }
         }
     });
     

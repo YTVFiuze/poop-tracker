@@ -28,6 +28,12 @@ $watcher.Path = $projectDir
 $watcher.IncludeSubdirectories = $true
 $watcher.EnableRaisingEvents = $true
 
+# Pattern da monitorare
+$watcher.Filter = "*.*"
+$watcher.NotifyFilter = [System.IO.NotifyFilters]::FileName -bor 
+                       [System.IO.NotifyFilters]::DirectoryName -bor 
+                       [System.IO.NotifyFilters]::LastWrite
+
 # Variabili per il debounce
 $debounceSeconds = 5
 $lastRunTime = [DateTime]::MinValue
@@ -53,19 +59,32 @@ function Invoke-FileChangeHandler {
     
     # Evento che viene triggerato quando il timer scade
     $script:timer.Add_Elapsed({
-        $relativePath = $path.Replace($projectDir, '').TrimStart('\')
-        Write-ColorLog "Modifiche rilevate in: $relativePath" "Yellow"
-        
-        # Esegui lo script di auto-commit
         try {
-            & "$projectDir\auto-git.ps1"
+            $relativePath = $path.Replace($projectDir, '').TrimStart('\')
+            Write-ColorLog "Modifiche rilevate in: $relativePath" "Yellow"
+            
+            # Esegui lo script di auto-commit
+            $scriptPath = Join-Path $projectDir "auto-git.ps1"
+            if (Test-Path $scriptPath) {
+                Write-ColorLog "Esecuzione auto-git.ps1..." "Cyan"
+                & $scriptPath
+                if ($LASTEXITCODE -eq 0) {
+                    Write-ColorLog "Auto-commit completato con successo" "Green"
+                } else {
+                    Write-ColorLog "Errore durante l'auto-commit" "Red"
+                }
+            } else {
+                Write-ColorLog "Script auto-git.ps1 non trovato!" "Red"
+            }
         }
         catch {
-            Write-ColorLog "Errore durante l'esecuzione di auto-git.ps1: $_" "Red"
+            Write-ColorLog "Errore durante l'elaborazione delle modifiche: $_" "Red"
+            Write-ColorLog $_.ScriptStackTrace "Red"
         }
-        
-        $script:timer.Stop()
-        $script:timer.Dispose()
+        finally {
+            $script:timer.Stop()
+            $script:timer.Dispose()
+        }
     })
     
     # Avvia il timer
@@ -100,6 +119,10 @@ $handlers | ForEach-Object {
 }
 
 try {
+    # Esegui auto-git.ps1 all'avvio per gestire eventuali modifiche pendenti
+    Write-ColorLog "Controllo modifiche pendenti..." "Yellow"
+    & (Join-Path $projectDir "auto-git.ps1")
+    
     Write-ColorLog "Monitoraggio avviato. In attesa di modifiche..." "Green"
     while ($true) { Start-Sleep -Seconds 1 }
 }

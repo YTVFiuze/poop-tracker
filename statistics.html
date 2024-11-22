@@ -7,6 +7,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
@@ -16,6 +17,7 @@
             <nav>
                 <a href="index.html" class="back-btn">
                     <span class="material-icons">arrow_back</span>
+                    <span>Home</span>
                 </a>
                 <h1>Statistiche</h1>
             </nav>
@@ -23,26 +25,31 @@
 
         <main>
             <div class="statistics-header">
-                <h2>Statistiche</h2>
-                <a href="charts.html" class="view-charts-btn">
-                    <span class="material-icons">insert_chart</span>
-                    Visualizza Grafici
+                <h2>Riepilogo</h2>
+                <a href="charts.html" class="btn btn-charts">
+                    <span class="material-icons">bar_chart</span>
+                    Grafici
                 </a>
             </div>
+            
             <div class="statistics-grid">
                 <div class="stat-card">
+                    <span class="material-icons stat-icon">format_list_numbered</span>
                     <h3>Visite Totali</h3>
                     <p id="totalVisits">0</p>
                 </div>
                 <div class="stat-card">
+                    <span class="material-icons stat-icon">calendar_today</span>
                     <h3>Media Giornaliera</h3>
                     <p id="dailyAverage">0</p>
                 </div>
                 <div class="stat-card">
+                    <span class="material-icons stat-icon">timer</span>
                     <h3>Durata Media</h3>
                     <p id="averageDuration">0 min</p>
                 </div>
                 <div class="stat-card">
+                    <span class="material-icons stat-icon">star</span>
                     <h3>Valutazione Media</h3>
                     <p id="averageRating">0 ⭐</p>
                 </div>

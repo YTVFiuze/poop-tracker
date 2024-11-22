@@ -7,6 +7,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
@@ -15,7 +16,10 @@
         <h1>Poop Tracker</h1>
         
         <nav class="navigation">
-            <a href="statistics.html" class="btn btn-stats">📊 Visualizza Statistiche</a>
+            <a href="statistics.html" class="btn btn-stats">
+                <span class="material-icons">insert_chart</span>
+                Statistiche
+            </a>
         </nav>
 
         <div class="shake-instructions">
@@ -34,7 +38,7 @@
                 <input type="time" id="time" required>
             </div>
             <div class="form-group">
-                <label for="duration">Durata:</label>
+                <label for="duration">Durata (minuti):</label>
                 <div class="duration-input-wrapper">
                     <input type="number" id="duration" min="0" value="0">
                 </div>
@@ -64,13 +68,19 @@
                 <label for="notes">Note (opzionale):</label>
                 <textarea id="notes" rows="3" placeholder="Aggiungi note sulla tua visita..."></textarea>
             </div>
-            <button type="submit" class="btn btn-primary">Registra Visita</button>
+            <button type="submit" class="btn btn-primary">
+                <span class="material-icons">add_circle</span>
+                Registra Visita
+            </button>
         </form>
 
         <div class="health-tips">
             <h2>Consigli per la Salute</h2>
             <div id="dailyTip" class="tip-card"></div>
-            <button id="waterReminder" class="btn reminder-btn">Attiva Promemoria Acqua</button>
+            <button id="waterReminder" class="btn reminder-btn">
+                <span class="material-icons">water_drop</span>
+                Promemoria Acqua
+            </button>
         </div>
     </div>
 
@@ -78,7 +88,10 @@
         <div class="popup-content">
             <h3>Permesso Richiesto</h3>
             <p>Per utilizzare la funzione di rilevamento del movimento, è necessario concedere l'accesso al sensore di movimento del dispositivo.</p>
-            <button id="grantPermission" class="btn">Concedi Permesso</button>
+            <button id="grantPermission" class="btn">
+                <span class="material-icons">check_circle</span>
+                Concedi Permesso
+            </button>
         </div>
     </div>
 
@@ -87,7 +100,10 @@
             <h3>Timer Visita</h3>
             <div id="timer">00:00</div>
             <div class="timer-controls">
-                <button id="stopTimer" class="btn">Termina</button>
+                <button id="stopTimer" class="btn">
+                    <span class="material-icons">stop</span>
+                    Termina
+                </button>
             </div>
         </div>
     </div>
