@@ -15,39 +15,42 @@ document.addEventListener('DOMContentLoaded', () => {
     let lastY = null;
     let lastZ = null;
     let lastUpdate = 0;
-    const shakeThreshold = 10; // Ridotto per maggiore sensibilità
+    const shakeThreshold = 5; // Ridotto per maggiore sensibilità
     let isShaking = false;
     let shakeTimeout;
-    let debugMode = true; // Per vedere i valori dell'accelerometro
+    let debugMode = true;
+
+    // Funzione per il debug
+    function updateDebugInfo(message) {
+        const shakeStatus = document.getElementById('shake-status');
+        shakeStatus.textContent = message;
+        console.log(message);
+    }
 
     // Richiedi il permesso per l'accelerometro
     async function requestDeviceMotion() {
-        const shakeStatus = document.getElementById('shake-status');
+        updateDebugInfo('Richiesta permessi...');
         
         try {
             if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
-                // iOS 13+ richiede un permesso esplicito
+                // iOS 13+
                 const response = await DeviceMotionEvent.requestPermission();
                 if (response === 'granted') {
                     window.addEventListener('devicemotion', handleShake);
-                    shakeStatus.textContent = 'Rilevamento attivo ';
-                    shakeStatus.classList.add('active');
+                    updateDebugInfo('Permessi OK ');
                     return true;
                 } else {
-                    shakeStatus.textContent = 'Permesso negato ';
-                    alert('Per favore abilita l\'accelerometro per usare l\'app!');
+                    updateDebugInfo('Permessi negati ');
                     return false;
                 }
             } else {
-                // Android e vecchi iOS
+                // Android
                 window.addEventListener('devicemotion', handleShake);
-                shakeStatus.textContent = 'Rilevamento attivo ';
-                shakeStatus.classList.add('active');
+                updateDebugInfo('Rilevamento attivo ');
                 return true;
             }
         } catch (error) {
-            shakeStatus.textContent = 'Errore ';
-            console.error('Errore accelerometro:', error);
+            updateDebugInfo('Errore: ' + error);
             return false;
         }
     }
@@ -200,58 +203,58 @@ function formatDate(dateStr) {
 
 // Gestisce l'evento di scuotimento
 function handleShake(event) {
-    const shakeStatus = document.getElementById('shake-status');
     if (!event.accelerationIncludingGravity) {
-        shakeStatus.textContent = 'Accelerometro non disponibile ';
+        updateDebugInfo('No accelerometer data');
         return;
     }
 
     const current = event.accelerationIncludingGravity;
     const currentTime = new Date().getTime();
+
+    // Mostra sempre i valori dell'accelerometro
+    updateDebugInfo(`X: ${Math.round(current.x)} Y: ${Math.round(current.y)} Z: ${Math.round(current.z)}`);
+
+    if (lastX === null) {
+        lastX = current.x;
+        lastY = current.y;
+        lastZ = current.z;
+        lastUpdate = currentTime;
+        return;
+    }
+
     const timeDiff = currentTime - lastUpdate;
-
-    if (timeDiff > 100) { // Aggiorniamo ogni 100ms
-        if (debugMode) {
-            shakeStatus.textContent = `X: ${Math.round(current.x)} Y: ${Math.round(current.y)} Z: ${Math.round(current.z)}`;
-        }
-
-        if (lastX === null) {
-            lastX = current.x;
-            lastY = current.y;
-            lastZ = current.z;
-            lastUpdate = currentTime;
-            return;
-        }
-
+    if (timeDiff > 50) { // Ridotto a 50ms per maggiore reattività
         const deltaX = Math.abs(current.x - lastX);
         const deltaY = Math.abs(current.y - lastY);
         const deltaZ = Math.abs(current.z - lastZ);
 
-        if (!isShaking && (deltaX > shakeThreshold || deltaY > shakeThreshold || deltaZ > shakeThreshold)) {
-            isShaking = true;
-            shakeStatus.textContent = ' Registrazione in corso...';
-            shakeStatus.classList.add('active');
+        const movement = Math.max(deltaX, deltaY, deltaZ);
 
-            // Vibra il telefono se supportato
+        if (!isShaking && movement > shakeThreshold) {
+            isShaking = true;
+            
+            // Vibra il telefono
             if ('vibrate' in navigator) {
                 navigator.vibrate(200);
             }
 
-            // Registra automaticamente un nuovo record
+            // Registra il record
             const now = new Date();
-            const date = now.toISOString().split('T')[0];
-            const time = now.toTimeString().slice(0,5);
-            
-            addRecord(date, time, 'Registrato via scuotimento ');
+            addRecord(
+                now.toISOString().split('T')[0],
+                now.toTimeString().slice(0,5),
+                `Movimento rilevato! (${movement.toFixed(1)}) `
+            );
             displayRecords();
 
-            // Mostra conferma
+            // Feedback visivo e sonoro
+            updateDebugInfo(' Registrazione in corso...');
             setTimeout(() => {
-                alert('Record salvato con successo! ');
-                shakeStatus.textContent = 'In attesa dello scuotimento...';
-            }, 1000);
+                alert('Record salvato!');
+                updateDebugInfo('In attesa...');
+            }, 500);
 
-            // Reset dello stato di scuotimento dopo un po'
+            // Reset dopo 1 secondo
             clearTimeout(shakeTimeout);
             shakeTimeout = setTimeout(() => {
                 isShaking = false;
