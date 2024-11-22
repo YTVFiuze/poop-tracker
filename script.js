@@ -43,22 +43,20 @@ document.addEventListener('DOMContentLoaded', initializePage);
 
 // Funzione per inizializzare la pagina
 function initializePage() {
-    // Elementi del form
-    const form = document.getElementById('poopForm');
-    const timerPopup = document.getElementById('timerPopup');
-    const timerDisplay = document.getElementById('timerDisplay');
-    const stopTimerBtn = document.getElementById('stopTimer');
-    
-    // Se siamo nella pagina del form
-    if (form) {
-        form.addEventListener('submit', handleFormSubmit);
-        setupShakeDetection();
+    // Controlla se siamo nella pagina principale
+    if (window.location.pathname.endsWith('index.html') || window.location.pathname.endsWith('/')) {
+        setupForm();
+        setupTimer();
+        setupMotionDetection();
     }
-
     // Se siamo nella pagina delle statistiche
-    if (window.location.pathname.includes('statistics.html')) {
+    else if (window.location.pathname.includes('statistics.html')) {
         displayRecords();
         updateStatistics();
+    }
+    // Se siamo nella pagina dei grafici
+    else if (window.location.pathname.includes('charts.html')) {
+        initializeCharts();
     }
 }
 
@@ -642,11 +640,17 @@ function setupWaterReminder() {
 
 requestMotionPermission();
 
-// Funzione per inizializzare i grafici nella pagina charts.html
+// Funzione per inizializzare i grafici
 function initializeCharts() {
-    if (window.location.pathname.endsWith('charts.html')) {
-        // Grafico visite settimanali
-        const visitsCtx = document.getElementById('visitsChart').getContext('2d');
+    const records = getRecords();
+    if (!records || records.length === 0) {
+        console.log('Nessun record trovato per i grafici');
+        return;
+    }
+
+    // Grafico visite settimanali
+    const visitsCtx = document.getElementById('visitsChart');
+    if (visitsCtx) {
         const visits = getLastSevenDaysVisits();
         new Chart(visitsCtx, {
             type: 'bar',
@@ -673,9 +677,11 @@ function initializeCharts() {
                 }
             }
         });
+    }
 
-        // Grafico distribuzione oraria
-        const timeCtx = document.getElementById('timeDistributionChart').getContext('2d');
+    // Grafico distribuzione oraria
+    const timeCtx = document.getElementById('timeDistributionChart');
+    if (timeCtx) {
         const timeDistribution = getTimeDistribution();
         new Chart(timeCtx, {
             type: 'line',
@@ -703,9 +709,11 @@ function initializeCharts() {
                 }
             }
         });
+    }
 
-        // Grafico valutazioni
-        const ratingsCtx = document.getElementById('ratingsChart').getContext('2d');
+    // Grafico valutazioni
+    const ratingsCtx = document.getElementById('ratingsChart');
+    if (ratingsCtx) {
         const ratings = getRatingsDistribution();
         new Chart(ratingsCtx, {
             type: 'pie',
@@ -724,12 +732,19 @@ function initializeCharts() {
             },
             options: {
                 responsive: true,
-                maintainAspectRatio: false
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom'
+                    }
+                }
             }
         });
+    }
 
-        // Grafico durata media
-        const durationCtx = document.getElementById('durationChart').getContext('2d');
+    // Grafico durata media
+    const durationCtx = document.getElementById('durationChart');
+    if (durationCtx) {
         const durations = getAverageDurationByDay();
         new Chart(durationCtx, {
             type: 'bar',
@@ -805,12 +820,13 @@ function getRatingsDistribution() {
 
 function getAverageDurationByDay() {
     const records = getRecords();
-    const durationsByDay = Array(7).fill([]);
+    const durationsByDay = Array(7).fill(0).map(() => []);
     
     records.forEach(record => {
-        const day = new Date(record.date).getDay();
-        const duration = record.duration || 0;
-        durationsByDay[day] = [...durationsByDay[day], duration];
+        if (record.duration) {
+            const day = new Date(record.date).getDay();
+            durationsByDay[day].push(record.duration);
+        }
     });
     
     return durationsByDay.map(durations => {
@@ -820,8 +836,5 @@ function getAverageDurationByDay() {
     });
 }
 
-// Aggiungi l'inizializzazione dei grafici all'avvio della pagina
-document.addEventListener('DOMContentLoaded', () => {
-    initializePage();
-    initializeCharts();
-});
+// Inizializza la pagina quando il DOM è caricato
+document.addEventListener('DOMContentLoaded', initializePage);
