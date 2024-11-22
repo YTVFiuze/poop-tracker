@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Grafici - Poop Tracker</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <nav>
+                <a href="statistics.html" class="back-btn">
+                    <span class="material-icons">arrow_back</span>
+                </a>
+                <h1>Grafici Dettagliati</h1>
+            </nav>
+        </header>
+
+        <main class="charts-page">
+            <div class="charts-container">
+                <div class="chart-wrapper">
+                    <h3>Visite negli ultimi 7 giorni</h3>
+                    <canvas id="visitsChart"></canvas>
+                </div>
+                <div class="chart-wrapper">
+                    <h3>Distribuzione oraria</h3>
+                    <canvas id="timeDistributionChart"></canvas>
+                </div>
+                <div class="chart-wrapper">
+                    <h3>Valutazioni nel tempo</h3>
+                    <canvas id="ratingsChart"></canvas>
+                </div>
+                <div class="chart-wrapper">
+                    <h3>Durata media per giorno</h3>
+                    <canvas id="durationChart"></canvas>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
