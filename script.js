@@ -41,6 +41,7 @@ let timeDistributionChart;
 // Inizializzazione
 document.addEventListener('DOMContentLoaded', () => {
     initializeApp();
+    setupForm();
     setupEventListeners();
     loadRecords();
     updateStatistics();
@@ -146,61 +147,13 @@ function handleShake() {
     showNotification('Registrazione iniziata! ');
 }
 
-// Gestione del form
-document.getElementById('poopForm').addEventListener('submit', function(e) {
-    e.preventDefault();
-    
-    const formData = {
-        date: document.getElementById('date').value,
-        time: document.getElementById('time').value,
-        duration: document.getElementById('duration').value,
-        rating: document.getElementById('rating').value,
-        mood: document.getElementById('mood').value,
-        notes: document.getElementById('notes').value
-    };
-    
-    saveRecord(formData);
-    updateStatistics();
-    showNotification('Visita registrata con successo! ');
-    
-    // Reset form
-    this.reset();
-    document.getElementById('rating').value = '3';
-    document.getElementById('mood').value = '😊';
-});
-
-// Gestione delle stelle di valutazione
-document.querySelectorAll('.star').forEach(star => {
-    star.addEventListener('click', function() {
-        const rating = this.dataset.rating;
-        document.getElementById('rating').value = rating;
-        
-        // Aggiorna le stelle attive
-        document.querySelectorAll('.star').forEach(s => {
-            s.classList.toggle('active', s.dataset.rating <= rating);
-        });
-    });
-});
-
-// Gestione delle emoji dello stato d'animo
-document.querySelectorAll('.mood').forEach(mood => {
-    mood.addEventListener('click', function() {
-        const selectedMood = this.dataset.mood;
-        document.getElementById('mood').value = selectedMood;
-        
-        // Aggiorna l'emoji attiva
-        document.querySelectorAll('.mood').forEach(m => {
-            m.classList.toggle('active', m.dataset.mood === selectedMood);
-        });
-    });
-});
-
 // Gestione del timer
 function startTimer() {
     if (!isTimerRunning) {
         isTimerRunning = true;
         startTime = Date.now();
         timerPopup.style.display = 'flex';
+        timerPopup.style.opacity = '1';
         
         // Imposta il valore iniziale del timer
         document.getElementById('duration').value = '0';
@@ -211,7 +164,9 @@ function startTimer() {
         timerInterval = setInterval(updateTimerDisplay, 1000);
         
         // Abilita il pulsante di stop
-        stopTimerBtn.disabled = false;
+        if (stopTimerBtn) {
+            stopTimerBtn.disabled = false;
+        }
     }
 }
 
@@ -220,8 +175,14 @@ function updateTimerDisplay() {
     const minutes = Math.floor(elapsedTime / 60000);
     const seconds = Math.floor((elapsedTime % 60000) / 1000);
     
-    timerDisplay.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-    document.getElementById('duration').value = minutes.toString();
+    if (timerDisplay) {
+        timerDisplay.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+    }
+    
+    const durationInput = document.getElementById('duration');
+    if (durationInput) {
+        durationInput.value = minutes.toString();
+    }
 }
 
 function stopTimer() {
@@ -230,18 +191,72 @@ function stopTimer() {
         isTimerRunning = false;
         
         const elapsedMinutes = Math.floor((Date.now() - startTime) / 60000);
-        document.getElementById('duration').value = elapsedMinutes.toString();
+        const durationInput = document.getElementById('duration');
+        if (durationInput) {
+            durationInput.value = elapsedMinutes.toString();
+        }
         
         // Nascondi il popup con una transizione
-        timerPopup.style.opacity = '0';
-        setTimeout(() => {
-            timerPopup.style.display = 'none';
-            timerPopup.style.opacity = '1';
-        }, 300);
+        if (timerPopup) {
+            timerPopup.style.opacity = '0';
+            setTimeout(() => {
+                timerPopup.style.display = 'none';
+                timerPopup.style.opacity = '1';
+            }, 300);
+        }
         
         // Disabilita il pulsante di stop
-        stopTimerBtn.disabled = true;
+        if (stopTimerBtn) {
+            stopTimerBtn.disabled = true;
+        }
     }
+}
+
+// Gestione del form
+function setupForm() {
+    const form = document.getElementById('poopForm');
+    if (!form) return;
+
+    form.addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const formData = {
+            date: document.getElementById('date').value || new Date().toISOString().split('T')[0],
+            time: document.getElementById('time').value || new Date().toTimeString().slice(0, 5),
+            duration: document.getElementById('duration').value || '0',
+            rating: document.getElementById('rating').value || '3',
+            mood: document.getElementById('mood').value || '😊',
+            notes: document.getElementById('notes').value || ''
+        };
+        
+        // Salva i dati
+        const records = JSON.parse(localStorage.getItem('poopRecords') || '[]');
+        records.push(formData);
+        localStorage.setItem('poopRecords', JSON.stringify(records));
+        
+        // Aggiorna l'interfaccia
+        displayRecords();
+        updateStatistics();
+        showNotification('Visita registrata con successo! 🎉');
+        
+        // Reset form
+        this.reset();
+        document.getElementById('rating').value = '3';
+        document.getElementById('mood').value = '😊';
+        
+        // Reset stars and moods
+        document.querySelectorAll('.star').forEach(s => {
+            s.classList.toggle('active', s.dataset.rating <= 3);
+        });
+        document.querySelectorAll('.mood').forEach(m => {
+            m.classList.toggle('active', m.dataset.mood === '😊');
+        });
+        
+        // Se il timer è attivo, fermalo
+        if (isTimerRunning) {
+            stopTimer();
+        }
+    });
 }
 
 // Gestione delle notifiche
