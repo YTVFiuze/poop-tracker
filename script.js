@@ -111,11 +111,11 @@ function handleMotion(event) {
             isShaking = true;
             lastShake = now;
             shakeCount = 1;
-            updateShakeStatus('Movimento rilevato... 🔄');
+            updateShakeStatus('Movimento rilevato... ');
         } else if (now - lastShake > MIN_SHAKE_DURATION) {
             shakeCount++;
             lastShake = now;
-            updateShakeStatus(`Movimento rilevato... ${shakeCount}/${REQUIRED_SHAKES} 🔄`);
+            updateShakeStatus(`Movimento rilevato... ${shakeCount}/${REQUIRED_SHAKES} `);
             
             if (shakeCount >= REQUIRED_SHAKES) {
                 handleShake();
@@ -130,7 +130,7 @@ function handleMotion(event) {
 function resetShakeDetection() {
     isShaking = false;
     shakeCount = 0;
-    updateShakeStatus('In attesa di movimento... 🔍');
+    updateShakeStatus('In attesa di movimento... ');
 }
 
 function updateShakeStatus(message) {
@@ -140,16 +140,10 @@ function updateShakeStatus(message) {
 
 // Gestione dello scuotimento
 function handleShake() {
-    const now = new Date();
-    const record = {
-        date: now.toISOString().split('T')[0],
-        time: now.toTimeString().split(' ')[0],
-        notes: 'Registrato automaticamente via scuotimento 📱'
-    };
-    
-    saveRecord(record);
-    navigator.vibrate(200);
-    showNotification('Visita registrata! 💩');
+    if (!isTimerRunning) {
+        startTimer();
+    }
+    showNotification('Registrazione iniziata! ');
 }
 
 // Gestione del form
@@ -167,7 +161,7 @@ document.getElementById('poopForm').addEventListener('submit', function(e) {
     
     saveRecord(formData);
     updateStatistics();
-    showNotification('Visita registrata con successo! 🎉');
+    showNotification('Visita registrata con successo! ');
     
     // Reset form
     this.reset();
@@ -208,13 +202,28 @@ function startTimer() {
         startTime = Date.now();
         timerPopup.style.display = 'flex';
         
+        // Imposta il valore iniziale del timer
+        document.getElementById('duration').value = '0';
+        
         timerInterval = setInterval(() => {
             const elapsedTime = Date.now() - startTime;
             const minutes = Math.floor(elapsedTime / 60000);
             const seconds = Math.floor((elapsedTime % 60000) / 1000);
             
             timerDisplay.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+            document.getElementById('duration').value = minutes.toString();
         }, 1000);
+    }
+}
+
+function stopTimer() {
+    if (isTimerRunning) {
+        clearInterval(timerInterval);
+        isTimerRunning = false;
+        timerPopup.style.display = 'none';
+        
+        const elapsedMinutes = Math.floor((Date.now() - startTime) / 60000);
+        document.getElementById('duration').value = elapsedMinutes.toString();
     }
 }
 
@@ -255,127 +264,186 @@ function showNotification(message) {
     const notification = document.createElement('div');
     notification.className = 'notification';
     notification.textContent = message;
-    notification.style.cssText = `
-        position: fixed;
-        top: 20px;
-        left: 50%;
-        transform: translateX(-50%);
-        background: var(--primary-color);
-        color: white;
-        padding: 15px 30px;
-        border-radius: 10px;
-        box-shadow: 0 4px 15px rgba(0,0,0,0.2);
-        z-index: 1000;
-        animation: slideDown 0.3s ease-out, fadeOut 0.3s ease-out 2.7s forwards;
-    `;
-    
     document.body.appendChild(notification);
-    setTimeout(() => notification.remove(), 3000);
+    
+    // Rimuovi la notifica dopo 3 secondi
+    setTimeout(() => {
+        notification.remove();
+    }, 3000);
 }
 
-// Stili per le animazioni delle notifiche
-const style = document.createElement('style');
-style.textContent = `
-    @keyframes slideDown {
-        from { transform: translate(-50%, -100%); opacity: 0; }
-        to { transform: translate(-50%, 0); opacity: 1; }
-    }
-    
-    @keyframes fadeOut {
-        to { opacity: 0; }
-    }
-`;
-document.head.appendChild(style);
-
 function setupEventListeners() {
-    // Aggiungi event listener per il pulsante di stop del timer
-    stopTimerBtn.addEventListener('click', stopTimer);
+    // Gestione del timer
+    document.body.addEventListener('click', function(e) {
+        if (e.target.matches('#stopTimer')) {
+            stopTimer();
+        }
+    });
     
-    // Aggiungi event listener per il pulsante di promemoria dell'acqua
-    waterReminderBtn.addEventListener('click', setupWaterReminder);
+    // Gestione delle valutazioni
+    document.querySelectorAll('.star').forEach(star => {
+        star.addEventListener('click', function() {
+            const rating = this.dataset.rating;
+            document.getElementById('rating').value = rating;
+            document.querySelectorAll('.star').forEach(s => {
+                s.classList.toggle('active', s.dataset.rating <= rating);
+            });
+        });
+    });
+
+    // Gestione delle emoji
+    document.querySelectorAll('.mood').forEach(mood => {
+        mood.addEventListener('click', function() {
+            const selectedMood = this.dataset.mood;
+            document.getElementById('mood').value = selectedMood;
+            document.querySelectorAll('.mood').forEach(m => {
+                m.classList.toggle('active', m.dataset.mood === selectedMood);
+            });
+        });
+    });
+    
+    // Gestione del promemoria acqua
+    waterReminderBtn.addEventListener('click', async function() {
+        if ('Notification' in window) {
+            const permission = await Notification.requestPermission();
+            if (permission === 'granted') {
+                setupWaterReminder();
+                showNotification('Promemoria acqua attivato! ');
+            }
+        }
+    });
+}
+
+function setupWaterReminder() {
+    // Imposta un promemoria ogni 2 ore
+    setInterval(() => {
+        if (Notification.permission === 'granted') {
+            new Notification('Ricordati di bere! ', {
+                body: 'Mantieniti idratato per una buona digestione',
+                icon: '/favicon.ico'
+            });
+        }
+    }, 7200000); // 2 ore in millisecondi
+    
+    // Mostra la prima notifica immediatamente
+    new Notification('Promemoria acqua attivato! ', {
+        body: 'Riceverai un promemoria ogni 2 ore',
+        icon: '/favicon.ico'
+    });
 }
 
 function setupCharts() {
-    // Inizializza i grafici
-    visitsChart = new Chart(document.getElementById('visitsChart'), {
+    const ctx1 = document.getElementById('visitsChart').getContext('2d');
+    const ctx2 = document.getElementById('timeDistributionChart').getContext('2d');
+
+    visitsChart = new Chart(ctx1, {
         type: 'bar',
         data: {
             labels: ['Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab', 'Dom'],
             datasets: [{
                 label: 'Visite',
                 data: [0, 0, 0, 0, 0, 0, 0],
-                backgroundColor: 'rgba(255, 99, 132, 0.2)',
-                borderColor: 'rgba(255, 99, 132, 1)',
+                backgroundColor: 'rgba(108, 99, 255, 0.2)',
+                borderColor: 'rgba(108, 99, 255, 1)',
                 borderWidth: 1
             }]
         },
         options: {
+            responsive: true,
             scales: {
-                yAxes: [{
+                y: {
+                    beginAtZero: true,
                     ticks: {
-                        beginAtZero: true
+                        stepSize: 1
                     }
-                }]
+                }
             }
         }
     });
     
-    timeDistributionChart = new Chart(document.getElementById('timeDistributionChart'), {
-        type: 'pie',
+    timeDistributionChart = new Chart(ctx2, {
+        type: 'doughnut',
         data: {
-            labels: ['Mattina', 'Pomeriggio', 'Sera'],
+            labels: ['Mattina (6-12)', 'Pomeriggio (12-18)', 'Sera (18-6)'],
             datasets: [{
-                label: 'Distribuzione del tempo',
                 data: [0, 0, 0],
                 backgroundColor: [
-                    'rgba(255, 99, 132, 0.2)',
-                    'rgba(54, 162, 235, 0.2)',
-                    'rgba(255, 206, 86, 0.2)'
+                    'rgba(108, 99, 255, 0.2)',
+                    'rgba(76, 175, 80, 0.2)',
+                    'rgba(255, 193, 7, 0.2)'
                 ],
                 borderColor: [
-                    'rgba(255, 99, 132, 1)',
-                    'rgba(54, 162, 235, 1)',
-                    'rgba(255, 206, 86, 1)'
+                    'rgba(108, 99, 255, 1)',
+                    'rgba(76, 175, 80, 1)',
+                    'rgba(255, 193, 7, 1)'
                 ],
                 borderWidth: 1
             }]
         },
         options: {
-            title: {
-                display: true,
-                text: 'Distribuzione del tempo'
+            responsive: true,
+            plugins: {
+                legend: {
+                    position: 'bottom'
+                }
             }
         }
     });
 }
 
 function updateStatistics() {
-    // Aggiorna le statistiche
     const records = JSON.parse(localStorage.getItem('poopRecords') || '[]');
-    const visits = records.length;
-    const timeDistribution = {
-        mattina: 0,
-        pomeriggio: 0,
-        sera: 0
-    };
     
-    records.forEach(record => {
-        const date = new Date(`${record.date}T${record.time}`);
-        const hour = date.getHours();
-        
-        if (hour >= 6 && hour < 12) {
-            timeDistribution.mattina++;
-        } else if (hour >= 12 && hour < 18) {
-            timeDistribution.pomeriggio++;
-        } else {
-            timeDistribution.sera++;
-        }
+    // Aggiorna statistiche generali
+    document.getElementById('totalVisits').textContent = records.length;
+    
+    // Calcola media giornaliera
+    if (records.length > 0) {
+        const dates = [...new Set(records.map(r => r.date))];
+        const dailyAvg = (records.length / dates.length).toFixed(1);
+        document.getElementById('dailyAverage').textContent = dailyAvg;
+    }
+    
+    // Calcola durata media
+    if (records.length > 0) {
+        const avgDuration = (records.reduce((sum, r) => sum + parseInt(r.duration || 0), 0) / records.length).toFixed(1);
+        document.getElementById('averageDuration').textContent = avgDuration + ' min';
+    }
+    
+    // Calcola valutazione media
+    if (records.length > 0) {
+        const avgRating = (records.reduce((sum, r) => sum + parseInt(r.rating || 3), 0) / records.length).toFixed(1);
+        document.getElementById('averageRating').textContent = avgRating + ' ';
+    }
+    
+    // Aggiorna grafico visite per giorno
+    const lastWeekRecords = records.filter(r => {
+        const date = new Date(r.date);
+        const weekAgo = new Date();
+        weekAgo.setDate(weekAgo.getDate() - 7);
+        return date >= weekAgo;
     });
     
-    visitsChart.data.datasets[0].data = [visits];
-    timeDistributionChart.data.datasets[0].data = [timeDistribution.mattina, timeDistribution.pomeriggio, timeDistribution.sera];
+    const visitsByDay = Array(7).fill(0);
+    lastWeekRecords.forEach(record => {
+        const date = new Date(record.date);
+        const dayIndex = date.getDay();
+        visitsByDay[dayIndex]++;
+    });
     
+    visitsChart.data.datasets[0].data = visitsByDay;
     visitsChart.update();
+    
+    // Aggiorna grafico distribuzione oraria
+    const timeDistribution = [0, 0, 0]; // mattina, pomeriggio, sera
+    records.forEach(record => {
+        const hour = parseInt(record.time.split(':')[0]);
+        if (hour >= 6 && hour < 12) timeDistribution[0]++;
+        else if (hour >= 12 && hour < 18) timeDistribution[1]++;
+        else timeDistribution[2]++;
+    });
+    
+    timeDistributionChart.data.datasets[0].data = timeDistribution;
     timeDistributionChart.update();
 }
 
@@ -383,24 +451,6 @@ function showRandomHealthTip() {
     // Mostra un consiglio casuale
     const randomIndex = Math.floor(Math.random() * healthTips.length);
     dailyTipElement.textContent = healthTips[randomIndex];
-}
-
-function setupWaterReminder() {
-    // Imposta il promemoria dell'acqua
-    if ('Notification' in window) {
-        if (Notification.permission === 'granted') {
-            const notification = new Notification('Bevi acqua! 💧');
-            notification.onclick = function() {
-                window.open('https://www.example.com/bevi-acqua', '_blank');
-            };
-        }
-    }
-}
-
-function stopTimer() {
-    // Ferma il timer
-    clearInterval(timerInterval);
-    isTimerRunning = false;
 }
 
 requestMotionPermission();
