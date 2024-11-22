@@ -12,14 +12,17 @@
 </head>
 <body>
     <div class="container">
-        <nav class="navigation">
-            <a href="index.html" class="btn btn-back">← Torna alla Home</a>
-        </nav>
+        <header>
+            <nav>
+                <a href="index.html" class="back-btn">
+                    <span class="material-icons">arrow_back</span>
+                </a>
+                <h1>Statistiche</h1>
+            </nav>
+        </header>
 
-        <div class="statistics-container">
-            <h1>Le Tue Statistiche</h1>
-
-            <div class="stats-grid">
+        <main>
+            <div class="statistics-grid">
                 <div class="stat-card">
                     <h3>Visite Totali</h3>
                     <p id="totalVisits">0</p>
@@ -50,10 +53,9 @@
             </div>
 
             <div class="records-container">
-                <h2>Storico Visite</h2>
-                <div id="records"></div>
+                <!-- I record verranno inseriti qui dinamicamente -->
             </div>
-        </div>
+        </main>
     </div>
 
     <script src="script.js"></script>
