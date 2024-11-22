@@ -21,6 +21,7 @@ body {
     line-height: 1.6;
     color: var(--text-color);
     background-color: #f0f2f5;
+    min-height: 100vh;
 }
 
 .container {
@@ -53,13 +54,21 @@ h2 {
 }
 
 /* Form Styles */
+.form-container {
+    background: var(--background-color);
+    padding: 2rem;
+    border-radius: var(--border-radius);
+    box-shadow: 0 4px 6px var(--shadow-color);
+    margin-bottom: 2rem;
+}
+
 .form-group {
     margin-bottom: 1.5rem;
 }
 
 .form-group label {
     display: block;
-    margin-bottom: 0.5rem;
+    margin-bottom: 0.8rem;
     color: var(--text-color);
     font-weight: 500;
     font-size: 1rem;
@@ -78,6 +87,13 @@ h2 {
     font-family: 'Poppins', sans-serif;
     font-size: 1rem;
     transition: all 0.3s ease;
+}
+
+.form-group textarea {
+    resize: vertical;
+    min-height: 100px;
+    padding: 1rem;
+    line-height: 1.6;
 }
 
 .form-group input:focus,
@@ -119,17 +135,19 @@ h2 {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    padding: 0.8rem 1.5rem;
+    padding: 1rem 2rem;
     border: none;
     border-radius: var(--border-radius);
     background: var(--primary-color);
     color: white;
     font-size: 1rem;
-    font-weight: 500;
+    font-weight: 600;
     cursor: pointer;
     transition: all 0.3s ease;
     text-decoration: none;
     gap: 0.5rem;
+    width: 100%;
+    text-align: center;
 }
 
 .btn:hover {
@@ -141,16 +159,13 @@ h2 {
     transform: translateY(0);
 }
 
-.btn-success {
+.reminder-btn {
     background: var(--success-color);
+    margin-top: 1rem;
 }
 
-.btn-warning {
-    background: var(--warning-color);
-}
-
-.btn-danger {
-    background: var(--danger-color);
+.reminder-btn:hover {
+    box-shadow: 0 4px 12px rgba(76, 175, 80, 0.3);
 }
 
 /* Charts Section */
@@ -166,29 +181,44 @@ h2 {
     padding: 1.5rem;
     border-radius: var(--border-radius);
     box-shadow: 0 4px 6px var(--shadow-color);
-    height: 350px;
+    min-height: 400px;
     position: relative;
-    overflow: hidden;
+}
+
+.chart-wrapper h3 {
+    text-align: center;
+    margin-bottom: 1.5rem;
+    color: var(--text-color);
+    font-size: 1.2rem;
+    font-weight: 600;
 }
 
 .chart-wrapper canvas {
-    max-width: 100% !important;
-    height: 100% !important;
+    width: 100% !important;
+    height: calc(100% - 40px) !important;
 }
 
 /* Statistics Grid */
+.statistics-container {
+    background: var(--background-color);
+    padding: 2rem;
+    border-radius: var(--border-radius);
+    box-shadow: 0 4px 6px var(--shadow-color);
+    margin-bottom: 2rem;
+}
+
 .stats-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
     gap: 1.5rem;
-    margin: 2rem 0;
+    margin-bottom: 2rem;
 }
 
 .stat-card {
-    background: var(--background-color);
+    background: var(--card-background);
     padding: 1.5rem;
     border-radius: var(--border-radius);
-    box-shadow: 0 4px 6px var(--shadow-color);
+    text-align: center;
     transition: all 0.3s ease;
 }
 
@@ -200,29 +230,31 @@ h2 {
 .stat-card h3 {
     font-size: 1.1rem;
     color: var(--text-color);
-    margin-bottom: 0.5rem;
+    margin-bottom: 0.8rem;
+    font-weight: 500;
 }
 
 .stat-card p {
-    font-size: 1.8rem;
-    font-weight: 600;
+    font-size: 2rem;
+    font-weight: 700;
     color: var(--primary-color);
+    line-height: 1;
 }
 
 /* Records Section */
 .records-container {
-    background: var(--card-background);
+    background: var(--background-color);
     padding: 2rem;
     border-radius: var(--border-radius);
+    box-shadow: 0 4px 6px var(--shadow-color);
     margin-top: 2rem;
 }
 
 .record-card {
-    background: var(--background-color);
+    background: var(--card-background);
     padding: 1.5rem;
     border-radius: var(--border-radius);
     margin-bottom: 1rem;
-    box-shadow: 0 2px 4px var(--shadow-color);
     transition: all 0.3s ease;
 }
 
@@ -232,22 +264,26 @@ h2 {
 }
 
 .record-card h4 {
-    font-size: 1.1rem;
-    margin-bottom: 0.5rem;
+    font-size: 1.2rem;
+    margin-bottom: 1rem;
     color: var(--primary-color);
+    font-weight: 600;
 }
 
 .record-card p {
-    margin: 0.5rem 0;
+    margin: 0.8rem 0;
     color: var(--text-color);
+    line-height: 1.6;
 }
 
-.record-card .note {
-    margin-top: 0.5rem;
-    padding: 0.5rem;
+#notes {
     background: var(--card-background);
-    border-left: 3px solid var(--primary-color);
-    border-radius: 0 var(--border-radius) var(--border-radius) 0;
+    border: 2px solid #e1e1e1;
+    border-radius: var(--border-radius);
+    padding: 1rem;
+    font-family: 'Poppins', sans-serif;
+    width: 100%;
+    margin-bottom: 1rem;
 }
 
 /* Rating and Mood */
@@ -256,22 +292,88 @@ h2 {
     display: flex;
     gap: 1rem;
     margin: 1rem 0;
+    justify-content: center;
+    background: var(--card-background);
+    padding: 1rem;
+    border-radius: var(--border-radius);
 }
 
 .star,
 .mood {
-    font-size: 1.5rem;
+    font-size: 1.8rem;
     cursor: pointer;
     transition: all 0.3s ease;
+    opacity: 0.5;
 }
 
 .star:hover,
-.mood:hover {
+.mood:hover,
+.star.selected,
+.mood.selected {
     transform: scale(1.2);
+    opacity: 1;
 }
 
-.selected {
-    transform: scale(1.1);
+/* Timer Popup */
+.timer-popup {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.8);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.timer-content {
+    background: var(--background-color);
+    padding: 2rem;
+    border-radius: var(--border-radius);
+    text-align: center;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+    max-width: 90%;
+    width: 400px;
+}
+
+#timer {
+    font-size: 3.5rem;
+    font-weight: 700;
+    color: var(--primary-color);
+    margin: 2rem 0;
+    font-family: monospace;
+}
+
+.timer-controls {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+}
+
+.timer-controls .btn {
+    width: auto;
+    padding: 0.8rem 1.5rem;
+}
+
+/* Health Tips */
+.health-tips {
+    background: var(--background-color);
+    padding: 2rem;
+    border-radius: var(--border-radius);
+    box-shadow: 0 4px 6px var(--shadow-color);
+    margin-top: 2rem;
+}
+
+.tip-card {
+    background: var(--card-background);
+    padding: 1.5rem;
+    border-radius: var(--border-radius);
+    margin-bottom: 1.5rem;
+    font-size: 1.1rem;
+    line-height: 1.6;
+    border-left: 4px solid var(--primary-color);
 }
 
 /* Shake Instructions */
@@ -279,22 +381,30 @@ h2 {
     text-align: center;
     margin: 2rem 0;
     padding: 2rem;
-    background: var(--card-background);
+    background: var(--background-color);
     border-radius: var(--border-radius);
     box-shadow: 0 4px 6px var(--shadow-color);
 }
 
 .shake-status {
     margin-top: 1rem;
-    padding: 0.8rem;
+    padding: 1rem;
     border-radius: var(--border-radius);
-    background: var(--background-color);
+    background: var(--card-background);
     font-weight: 500;
+    transition: all 0.3s ease;
 }
 
 .shake-status.active {
     background: var(--success-color);
     color: white;
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+    100% { transform: scale(1); }
 }
 
 /* Responsive Design */
@@ -312,7 +422,7 @@ h2 {
     }
 
     .chart-wrapper {
-        height: 300px;
+        min-height: 300px;
         padding: 1rem;
     }
     
@@ -326,23 +436,12 @@ h2 {
     }
 
     .btn {
-        padding: 0.7rem 1.2rem;
+        padding: 0.8rem 1.5rem;
         font-size: 0.9rem;
     }
-}
 
-/* Animations */
-@keyframes fadeIn {
-    from {
-        opacity: 0;
-        transform: translateY(20px);
+    .star,
+    .mood {
+        font-size: 1.5rem;
     }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-.fade-in {
-    animation: fadeIn 0.5s ease forwards;
 }

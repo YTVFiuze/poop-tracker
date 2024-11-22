@@ -205,61 +205,46 @@ function startTimer() {
         // Imposta il valore iniziale del timer
         document.getElementById('duration').value = '0';
         
-        timerInterval = setInterval(() => {
-            const elapsedTime = Date.now() - startTime;
-            const minutes = Math.floor(elapsedTime / 60000);
-            const seconds = Math.floor((elapsedTime % 60000) / 1000);
-            
-            timerDisplay.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-            document.getElementById('duration').value = minutes.toString();
-        }, 1000);
+        // Aggiorna immediatamente il display
+        updateTimerDisplay();
+        
+        timerInterval = setInterval(updateTimerDisplay, 1000);
+        
+        // Abilita il pulsante di stop
+        stopTimerBtn.disabled = false;
     }
+}
+
+function updateTimerDisplay() {
+    const elapsedTime = Date.now() - startTime;
+    const minutes = Math.floor(elapsedTime / 60000);
+    const seconds = Math.floor((elapsedTime % 60000) / 1000);
+    
+    timerDisplay.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+    document.getElementById('duration').value = minutes.toString();
 }
 
 function stopTimer() {
     if (isTimerRunning) {
         clearInterval(timerInterval);
         isTimerRunning = false;
-        timerPopup.style.display = 'none';
         
         const elapsedMinutes = Math.floor((Date.now() - startTime) / 60000);
         document.getElementById('duration').value = elapsedMinutes.toString();
+        
+        // Nascondi il popup con una transizione
+        timerPopup.style.opacity = '0';
+        setTimeout(() => {
+            timerPopup.style.display = 'none';
+            timerPopup.style.opacity = '1';
+        }, 300);
+        
+        // Disabilita il pulsante di stop
+        stopTimerBtn.disabled = true;
     }
 }
 
-function saveRecord(formData) {
-    const records = JSON.parse(localStorage.getItem('poopRecords') || '[]');
-    records.push(formData);
-    localStorage.setItem('poopRecords', JSON.stringify(records));
-    displayRecords();
-}
-
-function displayRecords() {
-    const records = JSON.parse(localStorage.getItem('poopRecords') || '[]');
-    recordsContainer.innerHTML = '';
-    
-    records.reverse().forEach(record => {
-        const recordElement = document.createElement('div');
-        recordElement.className = 'record-card';
-        recordElement.innerHTML = `
-            <div class="record-header">
-                <span class="record-date">${record.date}</span>
-                <span class="record-time">${record.time}</span>
-            </div>
-            <div class="record-details">
-                <span class="record-duration">⏱️ ${record.duration} min</span>
-                <span class="record-rating">⭐ ${record.rating}/5</span>
-                <span class="record-mood">${record.mood}</span>
-            </div>
-            ${record.notes ? `<div class="record-notes">${record.notes}</div>` : ''}
-        `;
-        recordsContainer.appendChild(recordElement);
-    });
-    
-    updateStatistics();
-}
-
-// Notifiche
+// Gestione delle notifiche
 function showNotification(message) {
     const notification = document.createElement('div');
     notification.className = 'notification';
@@ -496,6 +481,38 @@ function showRandomHealthTip() {
     // Mostra un consiglio casuale
     const randomIndex = Math.floor(Math.random() * healthTips.length);
     dailyTipElement.textContent = healthTips[randomIndex];
+}
+
+function saveRecord(formData) {
+    const records = JSON.parse(localStorage.getItem('poopRecords') || '[]');
+    records.push(formData);
+    localStorage.setItem('poopRecords', JSON.stringify(records));
+    displayRecords();
+}
+
+function displayRecords() {
+    const records = JSON.parse(localStorage.getItem('poopRecords') || '[]');
+    recordsContainer.innerHTML = '';
+    
+    records.reverse().forEach(record => {
+        const recordElement = document.createElement('div');
+        recordElement.className = 'record-card';
+        recordElement.innerHTML = `
+            <div class="record-header">
+                <span class="record-date">${record.date}</span>
+                <span class="record-time">${record.time}</span>
+            </div>
+            <div class="record-details">
+                <span class="record-duration">⏱️ ${record.duration} min</span>
+                <span class="record-rating">⭐ ${record.rating}/5</span>
+                <span class="record-mood">${record.mood}</span>
+            </div>
+            ${record.notes ? `<div class="record-notes">${record.notes}</div>` : ''}
+        `;
+        recordsContainer.appendChild(recordElement);
+    });
+    
+    updateStatistics();
 }
 
 requestMotionPermission();
