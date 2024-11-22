@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tracciatore Bagno</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>📝 Tracciatore Bagno</h1>
+        
+        <div class="shake-instructions">
+            <h2>📱 Scuoti il telefono quando vai in bagno!</h2>
+            <p>Il record verrà salvato automaticamente</p>
+            <div id="shake-status" class="shake-status">In attesa...</div>
+        </div>
+
+        <div class="form-container">
+            <h2>Aggiungi Record Manualmente</h2>
+            <form id="poopForm">
+                <div class="form-group">
+                    <label for="date">Data:</label>
+                    <input type="date" id="date" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="time">Ora:</label>
+                    <input type="time" id="time" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="notes">Note (opzionale):</label>
+                    <textarea id="notes" rows="3"></textarea>
+                </div>
+                
+                <button type="submit" class="btn">Salva Record</button>
+            </form>
+        </div>
+
+        <div class="records-container">
+            <h2>Storia Records</h2>
+            <div id="recordsList"></div>
+        </div>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html>
