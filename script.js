@@ -20,18 +20,40 @@ document.addEventListener('DOMContentLoaded', () => {
     let shakeTimeout;
     
     // Richiedi il permesso per l'accelerometro
-    if (typeof DeviceMotionEvent.requestPermission === 'function') {
-        document.addEventListener('click', function() {
+    function requestDeviceMotion() {
+        if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
+            // iOS 13+ richiede un permesso esplicito
             DeviceMotionEvent.requestPermission()
                 .then(response => {
-                    if (response == 'granted') {
+                    if (response === 'granted') {
                         window.addEventListener('devicemotion', handleShake);
+                    } else {
+                        alert('Abbiamo bisogno del permesso per l\'accelerometro per rilevare lo scuotimento!');
                     }
                 })
-                .catch(console.error);
-        }, { once: true });
+                .catch(error => {
+                    alert('Errore nel richiedere il permesso per l\'accelerometro: ' + error);
+                });
+        } else {
+            // Android e vecchi iOS
+            try {
+                window.addEventListener('devicemotion', handleShake);
+            } catch (e) {
+                alert('Il tuo dispositivo potrebbe non supportare l\'accelerometro');
+            }
+        }
+    }
+
+    // Aggiungi pulsante per richiedere il permesso su iOS
+    if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
+        const button = document.createElement('button');
+        button.className = 'btn';
+        button.style.marginTop = '1rem';
+        button.textContent = 'Abilita Rilevamento Scuotimento';
+        button.addEventListener('click', requestDeviceMotion);
+        document.querySelector('.shake-instructions').appendChild(button);
     } else {
-        window.addEventListener('devicemotion', handleShake);
+        requestDeviceMotion();
     }
 });
 
