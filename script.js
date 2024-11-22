@@ -323,6 +323,15 @@ function setupCharts() {
     
     if (!visitsCtx || !timeCtx) return;
 
+    // Colori del tema
+    const colors = {
+        primary: '#6C63FF',
+        secondary: '#FF6B6B',
+        tertiary: '#4ECDC4',
+        background: 'rgba(255, 255, 255, 0.1)',
+        text: getComputedStyle(document.documentElement).getPropertyValue('--text-color').trim()
+    };
+
     // Configurazione comune per i grafici
     const commonOptions = {
         responsive: true,
@@ -332,28 +341,59 @@ function setupCharts() {
                 display: true,
                 position: 'top',
                 labels: {
-                    boxWidth: 20,
-                    padding: 10,
+                    usePointStyle: true,
+                    pointStyle: 'circle',
+                    padding: 15,
                     font: {
-                        size: window.innerWidth < 768 ? 10 : 12
+                        size: window.innerWidth < 768 ? 11 : 13,
+                        family: "'Poppins', sans-serif",
+                        weight: '500'
                     }
                 }
+            },
+            tooltip: {
+                backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                titleFont: {
+                    size: 14,
+                    family: "'Poppins', sans-serif",
+                    weight: '600'
+                },
+                bodyFont: {
+                    size: 13,
+                    family: "'Poppins', sans-serif"
+                },
+                padding: 12,
+                cornerRadius: 8,
+                displayColors: false
             }
         },
         scales: {
             y: {
                 beginAtZero: true,
+                grid: {
+                    color: 'rgba(0, 0, 0, 0.05)',
+                    drawBorder: false
+                },
                 ticks: {
                     font: {
-                        size: window.innerWidth < 768 ? 10 : 12
-                    }
+                        size: window.innerWidth < 768 ? 11 : 12,
+                        family: "'Poppins', sans-serif"
+                    },
+                    padding: 8,
+                    color: colors.text
                 }
             },
             x: {
+                grid: {
+                    display: false
+                },
                 ticks: {
                     font: {
-                        size: window.innerWidth < 768 ? 10 : 12
-                    }
+                        size: window.innerWidth < 768 ? 11 : 12,
+                        family: "'Poppins', sans-serif"
+                    },
+                    padding: 8,
+                    color: colors.text
                 }
             }
         }
@@ -369,13 +409,42 @@ function setupCharts() {
             datasets: [{
                 label: 'Visite',
                 data: visitsData.data,
-                backgroundColor: 'rgba(92, 89, 255, 0.6)',
-                borderColor: 'rgba(92, 89, 255, 1)',
-                borderWidth: 1
+                backgroundColor: [
+                    'rgba(108, 99, 255, 0.7)',
+                    'rgba(255, 107, 107, 0.7)',
+                    'rgba(78, 205, 196, 0.7)',
+                    'rgba(255, 180, 95, 0.7)',
+                    'rgba(131, 96, 195, 0.7)',
+                    'rgba(87, 190, 177, 0.7)',
+                    'rgba(255, 145, 144, 0.7)'
+                ],
+                borderColor: [
+                    'rgb(108, 99, 255)',
+                    'rgb(255, 107, 107)',
+                    'rgb(78, 205, 196)',
+                    'rgb(255, 180, 95)',
+                    'rgb(131, 96, 195)',
+                    'rgb(87, 190, 177)',
+                    'rgb(255, 145, 144)'
+                ],
+                borderWidth: 2,
+                borderRadius: 8,
+                maxBarThickness: 40
             }]
         },
         options: {
             ...commonOptions,
+            plugins: {
+                ...commonOptions.plugins,
+                tooltip: {
+                    ...commonOptions.plugins.tooltip,
+                    callbacks: {
+                        label: function(context) {
+                            return `${context.parsed.y} visite`;
+                        }
+                    }
+                }
+            },
             scales: {
                 ...commonOptions.scales,
                 y: {
@@ -393,20 +462,41 @@ function setupCharts() {
     const timeData = getTimeDistribution();
     if (timeDistributionChart) timeDistributionChart.destroy();
     timeDistributionChart = new Chart(timeCtx, {
-        type: 'line',
+        type: 'doughnut',
         data: {
             labels: timeData.labels,
             datasets: [{
-                label: 'Visite per Ora',
                 data: timeData.data,
-                borderColor: 'rgba(92, 89, 255, 1)',
-                backgroundColor: 'rgba(92, 89, 255, 0.1)',
+                backgroundColor: [
+                    'rgba(108, 99, 255, 0.8)',
+                    'rgba(255, 107, 107, 0.8)',
+                    'rgba(78, 205, 196, 0.8)'
+                ],
+                borderColor: [
+                    'rgb(108, 99, 255)',
+                    'rgb(255, 107, 107)',
+                    'rgb(78, 205, 196)'
+                ],
                 borderWidth: 2,
-                fill: true,
-                tension: 0.4
+                hoverOffset: 15
             }]
         },
-        options: commonOptions
+        options: {
+            ...commonOptions,
+            cutout: '60%',
+            radius: '90%',
+            plugins: {
+                ...commonOptions.plugins,
+                tooltip: {
+                    ...commonOptions.plugins.tooltip,
+                    callbacks: {
+                        label: function(context) {
+                            return `${context.parsed} visite`;
+                        }
+                    }
+                }
+            }
+        }
     });
 }
 

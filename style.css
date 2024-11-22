@@ -180,26 +180,71 @@ h2 {
 }
 
 .chart-wrapper {
-    background-color: var(--secondary-color);
+    background: linear-gradient(145deg, #ffffff, #f5f5f5);
     padding: 2rem;
-    border-radius: 12px;
-    box-shadow: 0 2px 4px var(--shadow-color);
+    border-radius: 16px;
+    box-shadow: 
+        5px 5px 10px rgba(0, 0, 0, 0.05),
+        -5px -5px 10px rgba(255, 255, 255, 0.8);
     aspect-ratio: 16/9;
     display: flex;
     flex-direction: column;
+    position: relative;
+    overflow: hidden;
+}
+
+.chart-wrapper::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, 
+        rgba(108, 99, 255, 0.7),
+        rgba(255, 107, 107, 0.7),
+        rgba(78, 205, 196, 0.7)
+    );
+    border-radius: 4px 4px 0 0;
 }
 
 .chart-wrapper h3 {
-    margin: 0 0 1rem 0;
+    margin: 0 0 1.5rem 0;
     font-size: 1.3rem;
     color: var(--text-color);
     text-align: center;
+    font-weight: 600;
 }
 
 .chart-wrapper canvas {
     flex: 1;
     width: 100% !important;
     height: 100% !important;
+}
+
+/* Responsive Design for Statistics */
+@media (max-width: 768px) {
+    .chart-wrapper {
+        padding: 1.5rem;
+        aspect-ratio: 4/3;
+    }
+    
+    .chart-wrapper h3 {
+        font-size: 1.1rem;
+        margin-bottom: 1rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .chart-wrapper {
+        aspect-ratio: 1/1;
+        padding: 1rem;
+    }
+    
+    .chart-wrapper h3 {
+        font-size: 1rem;
+        margin-bottom: 0.8rem;
+    }
 }
 
 /* Statistics Grid */
@@ -255,16 +300,6 @@ h2 {
 
     h2 {
         font-size: 1.5rem;
-    }
-
-    .chart-wrapper {
-        padding: 1rem;
-        aspect-ratio: 4/3;
-    }
-
-    .chart-wrapper h3 {
-        font-size: 1.1rem;
-        margin-bottom: 0.5rem;
     }
 
     .charts-container {
