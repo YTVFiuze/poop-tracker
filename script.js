@@ -335,26 +335,56 @@ function setupWaterReminder() {
 function setupCharts() {
     const ctx1 = document.getElementById('visitsChart').getContext('2d');
     const ctx2 = document.getElementById('timeDistributionChart').getContext('2d');
+    
+    Chart.defaults.font.family = "'Poppins', sans-serif";
+    Chart.defaults.font.size = 14;
+    Chart.defaults.color = getComputedStyle(document.documentElement).getPropertyValue('--text-color');
 
     visitsChart = new Chart(ctx1, {
         type: 'bar',
         data: {
-            labels: ['Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab', 'Dom'],
+            labels: ['Domenica', 'Lunedì', 'Martedì', 'Mercoledì', 'Giovedì', 'Venerdì', 'Sabato'],
             datasets: [{
                 label: 'Visite',
                 data: [0, 0, 0, 0, 0, 0, 0],
                 backgroundColor: 'rgba(108, 99, 255, 0.2)',
                 borderColor: 'rgba(108, 99, 255, 1)',
-                borderWidth: 1
+                borderWidth: 2,
+                borderRadius: 5,
+                maxBarThickness: 50
             }]
         },
         options: {
             responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: false
+                },
+                title: {
+                    display: true,
+                    text: 'Visite negli ultimi 7 giorni',
+                    padding: {
+                        bottom: 30
+                    }
+                }
+            },
             scales: {
                 y: {
                     beginAtZero: true,
                     ticks: {
-                        stepSize: 1
+                        stepSize: 1,
+                        precision: 0
+                    },
+                    grid: {
+                        display: true,
+                        drawBorder: false,
+                        color: 'rgba(0, 0, 0, 0.1)'
+                    }
+                },
+                x: {
+                    grid: {
+                        display: false
                     }
                 }
             }
@@ -368,25 +398,40 @@ function setupCharts() {
             datasets: [{
                 data: [0, 0, 0],
                 backgroundColor: [
-                    'rgba(108, 99, 255, 0.2)',
-                    'rgba(76, 175, 80, 0.2)',
-                    'rgba(255, 193, 7, 0.2)'
+                    'rgba(108, 99, 255, 0.7)',
+                    'rgba(76, 175, 80, 0.7)',
+                    'rgba(255, 193, 7, 0.7)'
                 ],
                 borderColor: [
                     'rgba(108, 99, 255, 1)',
                     'rgba(76, 175, 80, 1)',
                     'rgba(255, 193, 7, 1)'
                 ],
-                borderWidth: 1
+                borderWidth: 2,
+                hoverOffset: 4
             }]
         },
         options: {
             responsive: true,
+            maintainAspectRatio: false,
             plugins: {
                 legend: {
-                    position: 'bottom'
+                    position: 'bottom',
+                    labels: {
+                        padding: 20,
+                        usePointStyle: true,
+                        pointStyle: 'circle'
+                    }
+                },
+                title: {
+                    display: true,
+                    text: 'Distribuzione oraria delle visite',
+                    padding: {
+                        bottom: 30
+                    }
                 }
-            }
+            },
+            cutout: '60%'
         }
     });
 }
