@@ -49,11 +49,15 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 function initializeApp() {
-    // Inizializza i grafici
-    setupCharts();
+    // Inizializza i grafici solo se siamo nella pagina statistiche
+    if (window.location.pathname.includes('statistics.html')) {
+        setupCharts();
+    }
     
-    // Mostra un consiglio casuale
-    showRandomHealthTip();
+    // Mostra un consiglio casuale solo nella home
+    if (window.location.pathname.includes('index.html') || window.location.pathname.endsWith('/')) {
+        showRandomHealthTip();
+    }
     
     // Controlla se le notifiche sono supportate
     if ('Notification' in window) {
@@ -61,6 +65,20 @@ function initializeApp() {
             setupWaterReminder();
         }
     }
+}
+
+// Caricamento dei record
+function loadRecords() {
+    // Carica i record dal localStorage
+    const records = JSON.parse(localStorage.getItem('poopRecords') || '[]');
+    
+    // Se siamo nella pagina statistiche, mostra i record
+    if (window.location.pathname.includes('statistics.html')) {
+        displayRecords(records);
+        updateStatistics(records);
+    }
+    
+    return records;
 }
 
 // Gestione permessi
@@ -261,57 +279,73 @@ function setupForm() {
 
 // Gestione delle notifiche
 function showNotification(message) {
+    if (!('Notification' in window)) return;
+    
     const notification = document.createElement('div');
     notification.className = 'notification';
     notification.textContent = message;
+    
     document.body.appendChild(notification);
     
-    // Rimuovi la notifica dopo 3 secondi
+    // Animazione di fade-in
+    setTimeout(() => notification.classList.add('show'), 10);
+    
+    // Rimuovi dopo 3 secondi
     setTimeout(() => {
-        notification.remove();
+        notification.classList.remove('show');
+        setTimeout(() => notification.remove(), 300);
     }, 3000);
 }
 
+// Setup degli event listeners
 function setupEventListeners() {
-    // Gestione del timer
-    document.body.addEventListener('click', function(e) {
-        if (e.target.matches('#stopTimer')) {
-            stopTimer();
-        }
-    });
-    
-    // Gestione delle valutazioni
-    document.querySelectorAll('.star').forEach(star => {
-        star.addEventListener('click', function() {
-            const rating = this.dataset.rating;
-            document.getElementById('rating').value = rating;
-            document.querySelectorAll('.star').forEach(s => {
-                s.classList.toggle('active', s.dataset.rating <= rating);
+    // Setup delle stelle di valutazione
+    const stars = document.querySelectorAll('.star');
+    if (stars.length > 0) {
+        stars.forEach(star => {
+            star.addEventListener('click', function() {
+                const rating = this.dataset.rating;
+                const ratingInput = document.getElementById('rating');
+                if (ratingInput) {
+                    ratingInput.value = rating;
+                }
+                
+                // Aggiorna le stelle attive
+                stars.forEach(s => {
+                    s.classList.toggle('active', s.dataset.rating <= rating);
+                });
             });
         });
-    });
+    }
 
-    // Gestione delle emoji
-    document.querySelectorAll('.mood').forEach(mood => {
-        mood.addEventListener('click', function() {
-            const selectedMood = this.dataset.mood;
-            document.getElementById('mood').value = selectedMood;
-            document.querySelectorAll('.mood').forEach(m => {
-                m.classList.toggle('active', m.dataset.mood === selectedMood);
+    // Setup delle emoji dello stato d'animo
+    const moods = document.querySelectorAll('.mood');
+    if (moods.length > 0) {
+        moods.forEach(mood => {
+            mood.addEventListener('click', function() {
+                const selectedMood = this.dataset.mood;
+                const moodInput = document.getElementById('mood');
+                if (moodInput) {
+                    moodInput.value = selectedMood;
+                }
+                
+                // Aggiorna l'emoji attiva
+                moods.forEach(m => {
+                    m.classList.toggle('active', m.dataset.mood === selectedMood);
+                });
             });
         });
-    });
-    
-    // Gestione del promemoria acqua
-    waterReminderBtn.addEventListener('click', async function() {
-        if ('Notification' in window) {
-            const permission = await Notification.requestPermission();
-            if (permission === 'granted') {
-                setupWaterReminder();
-                showNotification('Promemoria acqua attivato! ');
-            }
-        }
-    });
+    }
+
+    // Setup del pulsante stop timer
+    if (stopTimerBtn) {
+        stopTimerBtn.addEventListener('click', stopTimer);
+    }
+
+    // Setup del promemoria acqua
+    if (waterReminderBtn) {
+        waterReminderBtn.addEventListener('click', setupWaterReminder);
+    }
 }
 
 function setupWaterReminder() {
