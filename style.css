@@ -38,7 +38,9 @@ h1 {
     font-weight: 700;
     background: linear-gradient(45deg, var(--gradient-start), var(--gradient-end));
     -webkit-background-clip: text;
+    background-clip: text;
     -webkit-text-fill-color: transparent;
+    color: transparent;
     text-shadow: 2px 2px 4px var(--shadow-color);
 }
 
