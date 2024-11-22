@@ -318,107 +318,151 @@ function setupWaterReminder() {
 }
 
 function setupCharts() {
-    const ctx1 = document.getElementById('visitsChart').getContext('2d');
-    const ctx2 = document.getElementById('timeDistributionChart').getContext('2d');
+    const visitsCtx = document.getElementById('visitsChart')?.getContext('2d');
+    const timeCtx = document.getElementById('timeDistributionChart')?.getContext('2d');
     
-    Chart.defaults.font.family = "'Poppins', sans-serif";
-    Chart.defaults.font.size = 14;
-    Chart.defaults.color = getComputedStyle(document.documentElement).getPropertyValue('--text-color');
+    if (!visitsCtx || !timeCtx) return;
 
-    visitsChart = new Chart(ctx1, {
-        type: 'bar',
-        data: {
-            labels: ['Domenica', 'Lunedì', 'Martedì', 'Mercoledì', 'Giovedì', 'Venerdì', 'Sabato'],
-            datasets: [{
-                label: 'Visite',
-                data: [0, 0, 0, 0, 0, 0, 0],
-                backgroundColor: 'rgba(108, 99, 255, 0.2)',
-                borderColor: 'rgba(108, 99, 255, 1)',
-                borderWidth: 2,
-                borderRadius: 5,
-                maxBarThickness: 50
-            }]
+    // Configurazione comune per i grafici
+    const commonOptions = {
+        responsive: true,
+        maintainAspectRatio: true,
+        plugins: {
+            legend: {
+                display: true,
+                position: 'top',
+                labels: {
+                    boxWidth: 20,
+                    padding: 10,
+                    font: {
+                        size: window.innerWidth < 768 ? 10 : 12
+                    }
+                }
+            }
         },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: {
-                    display: false
-                },
-                title: {
-                    display: true,
-                    text: 'Visite negli ultimi 7 giorni',
-                    padding: {
-                        bottom: 30
+        scales: {
+            y: {
+                beginAtZero: true,
+                ticks: {
+                    font: {
+                        size: window.innerWidth < 768 ? 10 : 12
                     }
                 }
             },
-            scales: {
-                y: {
-                    beginAtZero: true,
-                    ticks: {
-                        stepSize: 1,
-                        precision: 0
-                    },
-                    grid: {
-                        display: true,
-                        drawBorder: false,
-                        color: 'rgba(0, 0, 0, 0.1)'
+            x: {
+                ticks: {
+                    font: {
+                        size: window.innerWidth < 768 ? 10 : 12
                     }
-                },
-                x: {
-                    grid: {
-                        display: false
+                }
+            }
+        }
+    };
+
+    // Grafico visite per giorno
+    const visitsData = getVisitsData();
+    if (visitsChart) visitsChart.destroy();
+    visitsChart = new Chart(visitsCtx, {
+        type: 'bar',
+        data: {
+            labels: visitsData.labels,
+            datasets: [{
+                label: 'Visite',
+                data: visitsData.data,
+                backgroundColor: 'rgba(92, 89, 255, 0.6)',
+                borderColor: 'rgba(92, 89, 255, 1)',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            ...commonOptions,
+            scales: {
+                ...commonOptions.scales,
+                y: {
+                    ...commonOptions.scales.y,
+                    ticks: {
+                        ...commonOptions.scales.y.ticks,
+                        stepSize: 1
                     }
                 }
             }
         }
     });
-    
-    timeDistributionChart = new Chart(ctx2, {
-        type: 'doughnut',
+
+    // Grafico distribuzione oraria
+    const timeData = getTimeDistribution();
+    if (timeDistributionChart) timeDistributionChart.destroy();
+    timeDistributionChart = new Chart(timeCtx, {
+        type: 'line',
         data: {
-            labels: ['Mattina (6-12)', 'Pomeriggio (12-18)', 'Sera (18-6)'],
+            labels: timeData.labels,
             datasets: [{
-                data: [0, 0, 0],
-                backgroundColor: [
-                    'rgba(108, 99, 255, 0.7)',
-                    'rgba(76, 175, 80, 0.7)',
-                    'rgba(255, 193, 7, 0.7)'
-                ],
-                borderColor: [
-                    'rgba(108, 99, 255, 1)',
-                    'rgba(76, 175, 80, 1)',
-                    'rgba(255, 193, 7, 1)'
-                ],
+                label: 'Visite per Ora',
+                data: timeData.data,
+                borderColor: 'rgba(92, 89, 255, 1)',
+                backgroundColor: 'rgba(92, 89, 255, 0.1)',
                 borderWidth: 2,
-                hoverOffset: 4
+                fill: true,
+                tension: 0.4
             }]
         },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: {
-                    position: 'bottom',
-                    labels: {
-                        padding: 20,
-                        usePointStyle: true,
-                        pointStyle: 'circle'
-                    }
-                },
-                title: {
-                    display: true,
-                    text: 'Distribuzione oraria delle visite',
-                    padding: {
-                        bottom: 30
-                    }
-                }
-            },
-            cutout: '60%'
-        }
+        options: commonOptions
     });
+}
+
+// Aggiorna i grafici quando la finestra viene ridimensionata
+window.addEventListener('resize', debounce(() => {
+    setupCharts();
+}, 250));
+
+function debounce(func, wait) {
+    let timeout;
+    return function executedFunction(...args) {
+        const later = () => {
+            clearTimeout(timeout);
+            func(...args);
+        };
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+    };
+}
+
+function getVisitsData() {
+    const records = JSON.parse(localStorage.getItem('poopRecords') || '[]');
+    const lastWeekRecords = records.filter(r => {
+        const date = new Date(r.date);
+        const weekAgo = new Date();
+        weekAgo.setDate(weekAgo.getDate() - 7);
+        return date >= weekAgo;
+    });
+    
+    const visitsByDay = Array(7).fill(0);
+    lastWeekRecords.forEach(record => {
+        const date = new Date(record.date);
+        const dayIndex = date.getDay();
+        visitsByDay[dayIndex]++;
+    });
+    
+    return {
+        labels: ['Domenica', 'Lunedì', 'Martedì', 'Mercoledì', 'Giovedì', 'Venerdì', 'Sabato'],
+        data: visitsByDay
+    };
+}
+
+function getTimeDistribution() {
+    const records = JSON.parse(localStorage.getItem('poopRecords') || '[]');
+    const timeDistribution = [0, 0, 0]; // mattina, pomeriggio, sera
+    records.forEach(record => {
+        const hour = parseInt(record.time.split(':')[0]);
+        if (hour >= 6 && hour < 12) timeDistribution[0]++;
+        else if (hour >= 12 && hour < 18) timeDistribution[1]++;
+        else timeDistribution[2]++;
+    });
+    
+    return {
+        labels: ['Mattina (6-12)', 'Pomeriggio (12-18)', 'Sera (18-6)'],
+        data: timeDistribution
+    };
 }
 
 function updateStatistics() {
@@ -447,33 +491,13 @@ function updateStatistics() {
     }
     
     // Aggiorna grafico visite per giorno
-    const lastWeekRecords = records.filter(r => {
-        const date = new Date(r.date);
-        const weekAgo = new Date();
-        weekAgo.setDate(weekAgo.getDate() - 7);
-        return date >= weekAgo;
-    });
-    
-    const visitsByDay = Array(7).fill(0);
-    lastWeekRecords.forEach(record => {
-        const date = new Date(record.date);
-        const dayIndex = date.getDay();
-        visitsByDay[dayIndex]++;
-    });
-    
-    visitsChart.data.datasets[0].data = visitsByDay;
+    const visitsData = getVisitsData();
+    visitsChart.data.datasets[0].data = visitsData.data;
     visitsChart.update();
     
     // Aggiorna grafico distribuzione oraria
-    const timeDistribution = [0, 0, 0]; // mattina, pomeriggio, sera
-    records.forEach(record => {
-        const hour = parseInt(record.time.split(':')[0]);
-        if (hour >= 6 && hour < 12) timeDistribution[0]++;
-        else if (hour >= 12 && hour < 18) timeDistribution[1]++;
-        else timeDistribution[2]++;
-    });
-    
-    timeDistributionChart.data.datasets[0].data = timeDistribution;
+    const timeData = getTimeDistribution();
+    timeDistributionChart.data.datasets[0].data = timeData.data;
     timeDistributionChart.update();
 }
 
