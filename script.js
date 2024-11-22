@@ -726,7 +726,7 @@ function initializeCharts() {
             window.timeDistributionChart = new Chart(timeCtx, {
                 type: 'line',
                 data: {
-                    labels: Array.from({length: 24}, (_, i) => `${i}:00`),
+                    labels: Array.from({length: 24}, (_, i) => `${i.toString().padStart(2, '0')}:00`),
                     datasets: [{
                         label: 'Visite per ora',
                         data: timeDistribution,
@@ -799,7 +799,7 @@ function initializeCharts() {
             window.durationChart = new Chart(durationCtx, {
                 type: 'bar',
                 data: {
-                    labels: ['Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab', 'Dom'],
+                    labels: ['Dom', 'Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab'],
                     datasets: [{
                         label: 'Durata media (minuti)',
                         data: durations,
@@ -813,7 +813,12 @@ function initializeCharts() {
                     maintainAspectRatio: false,
                     scales: {
                         y: {
-                            beginAtZero: true
+                            beginAtZero: true,
+                            ticks: {
+                                callback: function(value) {
+                                    return value + ' min';
+                                }
+                            }
                         }
                     }
                 }
