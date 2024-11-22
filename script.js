@@ -3,8 +3,9 @@ let lastX = null;
 let lastY = null;
 let lastZ = null;
 let lastUpdate = 0;
-const shakeThreshold = 15; // Aumentato per richiedere più movimento
-const minShakeDuration = 500; // Minimo mezzo secondo di movimento
+const shakeThreshold = 25; // Aumentato significativamente
+const minShakeDuration = 600; // Aumentato a 0.6 secondi
+const requiredShakes = 4; // Aumentato il numero di shake richiesti
 let shakeStartTime = 0;
 let consecutiveShakes = 0;
 let isShaking = false;
@@ -61,7 +62,7 @@ function handleShake(event) {
             }
 
             // Verifichiamo che il movimento sia durato abbastanza e sia stato abbastanza forte
-            if (consecutiveShakes >= 3 && (currentTime - shakeStartTime) >= minShakeDuration) {
+            if (consecutiveShakes >= requiredShakes && (currentTime - shakeStartTime) >= minShakeDuration) {
                 // Vibra il telefono
                 if ('vibrate' in navigator) {
                     navigator.vibrate(200);
