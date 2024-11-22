@@ -60,19 +60,34 @@ try {
         git add .
         Write-ColorLog "File aggiunti all'area di staging" "Green"
         
-        # Crea il commit con timestamp
+        # Crea il commit con timestamp e dettagli delle modifiche
         $timestamp = Get-FormattedTimestamp
-        git commit -m "Auto commit: $timestamp"
+        $changes = git diff --cached --name-status
+        $commitMessage = "Auto commit: $timestamp`n`nModifiche:`n$changes"
+        git commit -m $commitMessage
         Write-ColorLog "Commit creato" "Green"
         
-        # Push delle modifiche con output dettagliato
-        Write-ColorLog "Tentativo di push..." "Yellow"
-        $pushOutput = git push origin main 2>&1
-        if ($LASTEXITCODE -eq 0) {
-            Write-ColorLog "Push completato con successo" "Green"
-        } else {
-            Write-ColorLog "Errore durante il push: $pushOutput" "Red"
-            throw "Push fallito"
+        # Push delle modifiche con output dettagliato e retry
+        $maxRetries = 3
+        $retryCount = 0
+        $pushSuccess = $false
+        
+        while (-not $pushSuccess -and $retryCount -lt $maxRetries) {
+            Write-ColorLog "Tentativo di push ($($retryCount + 1)/$maxRetries)..." "Yellow"
+            $pushOutput = git push origin main 2>&1
+            if ($LASTEXITCODE -eq 0) {
+                Write-ColorLog "Push completato con successo" "Green"
+                $pushSuccess = $true
+            } else {
+                $retryCount++
+                if ($retryCount -lt $maxRetries) {
+                    Write-ColorLog "Push fallito, nuovo tentativo tra 3 secondi..." "Yellow"
+                    Start-Sleep -Seconds 3
+                } else {
+                    Write-ColorLog "Errore durante il push: $pushOutput" "Red"
+                    throw "Push fallito dopo $maxRetries tentativi"
+                }
+            }
         }
     }
     else {

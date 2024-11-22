@@ -175,24 +175,36 @@ h2 {
 .charts-container {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-    gap: 2rem;
-    margin: 2rem 0;
+    gap: 20px;
+    padding: 20px;
+    width: 100%;
 }
 
 .chart-wrapper {
-    background: var(--background-color);
-    border-radius: var(--border-radius);
-    padding: 1.5rem;
-    box-shadow: 0 2px 4px var(--shadow-color);
-    height: 300px;
+    background: #fff;
+    border-radius: 10px;
+    padding: 20px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    min-height: 300px;
+    position: relative;
 }
 
 .chart-wrapper h3 {
-    text-align: center;
-    margin-bottom: 1rem;
-    color: var(--text-color);
+    margin: 0 0 15px 0;
     font-size: 1.1rem;
-    font-weight: 500;
+    color: #333;
+}
+
+.chart-wrapper canvas {
+    width: 100% !important;
+    height: 250px !important;
+}
+
+.no-data {
+    text-align: center;
+    padding: 20px;
+    color: #666;
+    font-style: italic;
 }
 
 /* Stili per la pagina dei grafici */

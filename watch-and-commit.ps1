@@ -29,13 +29,26 @@ $watcher.IncludeSubdirectories = $true
 $watcher.EnableRaisingEvents = $true
 
 # Pattern da monitorare
-$watcher.Filter = "*.*"
+$watcher.Filter = "*.html;*.css;*.js;*.md"  # Monitora solo i file rilevanti
+$excludePatterns = @("*.git*", "*node_modules*", "*temp*")
+
+# Funzione per verificare se un file deve essere escluso
+function Test-ShouldExcludeFile {
+    param([string]$path)
+    foreach ($pattern in $excludePatterns) {
+        if ($path -like $pattern) {
+            return $true
+        }
+    }
+    return $false
+}
+
 $watcher.NotifyFilter = [System.IO.NotifyFilters]::FileName -bor 
                        [System.IO.NotifyFilters]::DirectoryName -bor 
                        [System.IO.NotifyFilters]::LastWrite
 
 # Variabili per il debounce
-$debounceSeconds = 5
+$debounceSeconds = 2  # Ridotto da 5 a 2 secondi
 $lastRunTime = [DateTime]::MinValue
 $timer = $null
 
@@ -43,6 +56,12 @@ $timer = $null
 function Invoke-FileChangeHandler {
     param([string]$changeType, [string]$path)
     
+    # Ignora i file che devono essere esclusi
+    if (Test-ShouldExcludeFile $path) {
+        Write-ColorLog "File ignorato: $path" "Gray"
+        return
+    }
+
     $now = Get-Date
     $script:lastRunTime = $now
     
