@@ -207,9 +207,26 @@ function stopTimer() {
         console.log('Campo durata aggiornato:', duration);
     }
     
-    document.getElementById('timerPopup').style.display = 'none';
-    showNotification('Timer fermato ⏱️');
+    // Salva automaticamente quando si ferma il timer
+    const now = new Date();
+    const data = {
+        date: now.toISOString().split('T')[0],
+        time: now.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' }),
+        duration: duration,
+        rating: parseInt(document.getElementById('rating')?.value) || 3,
+        mood: document.getElementById('mood')?.value || '😊',
+        notes: document.getElementById('notes')?.value || 'Registrato tramite timer'
+    };
+
+    try {
+        saveRecord(data);
+        showNotification('Visita registrata automaticamente! ⏱️');
+    } catch (error) {
+        console.error('Errore nel salvataggio automatico:', error);
+        showNotification('Errore nel salvataggio automatico 😕');
+    }
     
+    document.getElementById('timerPopup').style.display = 'none';
     startTime = null;
 }
 
@@ -239,17 +256,28 @@ async function saveRecord(data) {
         localStorage.setItem('poopRecords', JSON.stringify(records));
         console.log('Record salvato con successo:', data);
         
-        // Aggiorna i grafici se siamo nella pagina dei grafici
+        // Aggiorna i grafici e le statistiche
         if (window.location.pathname.includes('charts.html')) {
             initializeCharts();
         }
+        if (window.location.pathname.includes('statistics.html')) {
+            updateStatistics();
+        }
+
+        // Notifica altre finestre del cambiamento
+        const updateEvent = new StorageEvent('storage', {
+            key: 'poopRecords',
+            newValue: localStorage.getItem('poopRecords'),
+            url: window.location.href
+        });
+        window.dispatchEvent(updateEvent);
     } catch (error) {
         console.error('Errore nel salvataggio:', error);
         throw error;
     }
 }
 
-// Funzione per pulire tutti i grafici esistenti
+// Pulizia di tutti i grafici esistenti
 function destroyAllCharts() {
     console.log('Pulizia di tutti i grafici esistenti...');
     Object.keys(charts).forEach(key => {
@@ -398,12 +426,15 @@ function setupStatisticsUpdates() {
 // Aggiungi listener per gli aggiornamenti del localStorage
 window.addEventListener('storage', (event) => {
     if (event.key === 'poopRecords') {
+        console.log('Aggiornamento localStorage rilevato');
         // Se siamo nella pagina dei grafici, aggiornali
         if (window.location.pathname.includes('charts.html')) {
+            console.log('Aggiornamento grafici...');
             initializeCharts();
         }
         // Se siamo nella pagina delle statistiche, aggiornale
         if (window.location.pathname.includes('statistics.html')) {
+            console.log('Aggiornamento statistiche...');
             updateStatistics();
         }
     }
@@ -469,9 +500,8 @@ function getTimeDistribution(records) {
 }
 
 function getRatingsDistribution(records) {
-    // Debug: stampa i record ricevuti
-    console.log('Records ricevuti:', records);
-
+    console.log('Calcolo distribuzione valutazioni, records:', records);
+    
     const now = new Date();
     const dates = [];
     const ratings = [];
