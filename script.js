@@ -1,7 +1,7 @@
 // Costanti e configurazioni
 const SHAKE_THRESHOLD = 15;
 const MIN_SHAKE_DURATION = 600;
-const REQUIRED_SHAKES = 4;
+const REQUIRED_SHAKES = 2;
 
 // Stato dell'applicazione
 let isShaking = false;
@@ -9,6 +9,10 @@ let lastShake = 0;
 let shakeCount = 0;
 let timerInterval = null;
 let startTime = null;
+let lastX = 0, lastY = 0, lastZ = 0;
+let lastUpdate = 0;
+let isShakeEnabled = true;
+
 let charts = {
     visits: null,
     timeDistribution: null,
@@ -820,12 +824,6 @@ function updateTimerDisplay() {
 }
 
 // Gestione dello scuotimento
-let shakeThreshold = 15;
-let lastX = 0, lastY = 0, lastZ = 0;
-let lastUpdate = 0;
-let shakeCount = 0;
-let isShakeEnabled = true;
-
 function handleShake(event) {
     if (!isShakeEnabled) return;
 
@@ -841,14 +839,14 @@ function handleShake(event) {
         const deltaY = Math.abs(current.y - lastY);
         const deltaZ = Math.abs(current.z - lastZ);
 
-        if ((deltaX > shakeThreshold && deltaY > shakeThreshold) || 
-            (deltaX > shakeThreshold && deltaZ > shakeThreshold) || 
-            (deltaY > shakeThreshold && deltaZ > shakeThreshold)) {
+        if ((deltaX > SHAKE_THRESHOLD && deltaY > SHAKE_THRESHOLD) || 
+            (deltaX > SHAKE_THRESHOLD && deltaZ > SHAKE_THRESHOLD) || 
+            (deltaY > SHAKE_THRESHOLD && deltaZ > SHAKE_THRESHOLD)) {
             
             shakeCount++;
             console.log('Scuotimento rilevato:', shakeCount);
 
-            if (shakeCount >= 2) {
+            if (shakeCount >= REQUIRED_SHAKES) {
                 shakeCount = 0;
                 handleShakeAction();
             }
