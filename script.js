@@ -872,7 +872,8 @@ function handleShakeAction() {
         
         const currentDate = new Date();
         const data = {
-            date: currentDate.toISOString(),
+            date: currentDate.toISOString().split('T')[0],
+            time: currentDate.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' }),
             duration: duration,
             rating: 3, // Valore predefinito
             mood: '😊', // Emoji predefinita
@@ -883,6 +884,14 @@ function handleShakeAction() {
             saveRecord(data);
             showNotification('Visita registrata tramite scuotimento! 📱');
             stopTimer();
+
+            // Trigger l'evento storage manualmente per aggiornare le statistiche
+            const updateEvent = new StorageEvent('storage', {
+                key: 'poopRecords',
+                newValue: localStorage.getItem('poopRecords'),
+                url: window.location.href
+            });
+            window.dispatchEvent(updateEvent);
         } catch (error) {
             console.error('Errore nel salvataggio dopo scuotimento:', error);
             showNotification('Errore nel salvataggio 😕');
@@ -899,8 +908,10 @@ function handleShakeAction() {
 function initShakeDetection() {
     if (window.DeviceMotionEvent) {
         console.log('Rilevamento scuotimento supportato');
-        window.addEventListener('devicemotion', handleShake, false);
+        window.addEventListener('devicemotion', handleShake, true);
+        console.log('Event listener aggiunto per devicemotion');
     } else {
         console.log('Rilevamento scuotimento non supportato');
+        showNotification('Il tuo dispositivo non supporta il rilevamento del movimento 😕');
     }
 }
