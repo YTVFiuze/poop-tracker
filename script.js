@@ -1,5 +1,5 @@
 // Costanti e configurazioni
-const SHAKE_THRESHOLD = 50;
+const SHAKE_THRESHOLD = 15;
 const MIN_SHAKE_DURATION = 600;
 const REQUIRED_SHAKES = 4;
 
@@ -65,6 +65,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const randomTip = healthTips[Math.floor(Math.random() * healthTips.length)];
         dailyTip.textContent = randomTip;
     }
+
+    initShakeDetection();
 });
 
 // Setup degli event listener
@@ -815,4 +817,92 @@ function updateTimerDisplay() {
     
     document.getElementById('timer').textContent = 
         `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+}
+
+// Gestione dello scuotimento
+let shakeThreshold = 15;
+let lastX = 0, lastY = 0, lastZ = 0;
+let lastUpdate = 0;
+let shakeCount = 0;
+let isShakeEnabled = true;
+
+function handleShake(event) {
+    if (!isShakeEnabled) return;
+
+    const current = event.accelerationIncludingGravity;
+    if (!current) return;
+
+    const currentTime = new Date().getTime();
+    if ((currentTime - lastUpdate) > 100) {
+        const diffTime = currentTime - lastUpdate;
+        lastUpdate = currentTime;
+
+        const deltaX = Math.abs(current.x - lastX);
+        const deltaY = Math.abs(current.y - lastY);
+        const deltaZ = Math.abs(current.z - lastZ);
+
+        if ((deltaX > shakeThreshold && deltaY > shakeThreshold) || 
+            (deltaX > shakeThreshold && deltaZ > shakeThreshold) || 
+            (deltaY > shakeThreshold && deltaZ > shakeThreshold)) {
+            
+            shakeCount++;
+            console.log('Scuotimento rilevato:', shakeCount);
+
+            if (shakeCount >= 2) {
+                shakeCount = 0;
+                handleShakeAction();
+            }
+        }
+
+        lastX = current.x;
+        lastY = current.y;
+        lastZ = current.z;
+    }
+}
+
+function handleShakeAction() {
+    console.log('Azione scuotimento attivata');
+    
+    // Disabilita temporaneamente il rilevamento dello scuotimento
+    isShakeEnabled = false;
+    setTimeout(() => { isShakeEnabled = true; }, 3000);
+
+    // Se il timer è attivo, fermalo e salva
+    if (startTime) {
+        const duration = calculateDuration();
+        console.log('Timer attivo, durata:', duration, 'minuti');
+        
+        const currentDate = new Date();
+        const data = {
+            date: currentDate.toISOString(),
+            duration: duration,
+            rating: 3, // Valore predefinito
+            mood: '😊', // Emoji predefinita
+            notes: 'Registrato tramite scuotimento'
+        };
+
+        try {
+            saveRecord(data);
+            showNotification('Visita registrata tramite scuotimento! 📱');
+            stopTimer();
+        } catch (error) {
+            console.error('Errore nel salvataggio dopo scuotimento:', error);
+            showNotification('Errore nel salvataggio 😕');
+        }
+    } else {
+        // Se il timer non è attivo, avvialo
+        console.log('Avvio timer tramite scuotimento');
+        startTimer();
+        showNotification('Timer avviato tramite scuotimento! 📱');
+    }
+}
+
+// Inizializzazione del rilevamento dello scuotimento
+function initShakeDetection() {
+    if (window.DeviceMotionEvent) {
+        console.log('Rilevamento scuotimento supportato');
+        window.addEventListener('devicemotion', handleShake, false);
+    } else {
+        console.log('Rilevamento scuotimento non supportato');
+    }
 }
