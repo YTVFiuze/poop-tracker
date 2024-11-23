@@ -227,11 +227,30 @@ async function saveRecord(formData) {
     }
 }
 
+// Funzione per pulire tutti i grafici esistenti
+function destroyAllCharts() {
+    console.log('Pulizia di tutti i grafici esistenti...');
+    Object.keys(charts).forEach(key => {
+        if (charts[key]) {
+            try {
+                console.log(`Distruggo il grafico ${key}`);
+                charts[key].destroy();
+                charts[key] = null;
+            } catch (error) {
+                console.error(`Errore durante la distruzione del grafico ${key}:`, error);
+            }
+        }
+    });
+}
+
 // Inizializzazione dei grafici
 function initializeCharts() {
     console.log('Inizializzazione grafici...');
     
     try {
+        // Prima di tutto, distruggi tutti i grafici esistenti
+        destroyAllCharts();
+
         // Recupera i dati dal localStorage
         const records = JSON.parse(localStorage.getItem('poopRecords') || '[]');
         console.log('Record caricati:', records);
@@ -243,22 +262,24 @@ function initializeCharts() {
             return;
         }
 
-        // Inizializza il grafico delle valutazioni
+        // Inizializza ogni grafico in sequenza
+        console.log('Creazione grafico visite...');
+        const visitsData = getLastSevenDaysVisits(records);
+        charts.visits = createVisitsChart(visitsData);
+
         console.log('Creazione grafico valutazioni...');
         const ratingsData = getRatingsDistribution(records);
         charts.ratings = createRatingsChart(ratingsData);
 
-        // Inizializza gli altri grafici...
-        const visitsData = getLastSevenDaysVisits(records);
-        charts.visits = createVisitsChart(visitsData);
-
+        console.log('Creazione grafico distribuzione temporale...');
         const timeData = getTimeDistribution(records);
         charts.timeDistribution = createTimeDistributionChart(timeData);
 
+        console.log('Creazione grafico durata...');
         const durationData = getAverageDurationByDay(records);
         charts.duration = createDurationChart(durationData);
 
-        console.log('Inizializzazione completata');
+        console.log('Inizializzazione completata con successo');
     } catch (error) {
         console.error('Errore durante l\'inizializzazione:', error);
         document.querySelector('.charts-container').innerHTML = 
@@ -266,12 +287,24 @@ function initializeCharts() {
     }
 }
 
-// Aggiorna i grafici ogni 30 secondi se siamo nella pagina dei grafici
+// Modifica la funzione di aggiornamento dei grafici
 function setupChartUpdates() {
-    if (window.location.pathname.includes('charts.html')) {
+    // Aggiorna i grafici ogni 30 secondi
+    setInterval(() => {
+        console.log('Aggiornamento periodico dei grafici...');
         initializeCharts();
-        setInterval(initializeCharts, 30000); // Aggiorna ogni 30 secondi
-    }
+    }, 30000);
+
+    // Ascolta gli eventi di storage per aggiornamenti cross-window
+    window.addEventListener('storage', (e) => {
+        if (e.key === 'poopRecords') {
+            console.log('Rilevata modifica ai dati, aggiornamento grafici...');
+            initializeCharts();
+        }
+    });
+
+    // Inizializzazione iniziale
+    initializeCharts();
 }
 
 // Aggiorna le statistiche nella pagina statistics.html
