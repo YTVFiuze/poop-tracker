@@ -240,125 +240,20 @@ function initializeCharts() {
         });
 
         // Grafico visite settimanali
-        const visitsCtx = document.getElementById('visitsChart');
-        if (visitsCtx) {
-            const visits = getLastSevenDaysVisits(records);
-            charts.visits = new Chart(visitsCtx, {
-                type: 'bar',
-                data: {
-                    labels: visits.labels,
-                    datasets: [{
-                        label: 'Visite',
-                        data: visits.data,
-                        backgroundColor: 'rgba(75, 192, 192, 0.6)',
-                        borderColor: 'rgba(75, 192, 192, 1)',
-                        borderWidth: 1
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    scales: {
-                        y: {
-                            beginAtZero: true,
-                            ticks: { stepSize: 1 }
-                        }
-                    }
-                }
-            });
-        }
+        const visitsData = getLastSevenDaysVisits(records);
+        charts.visits = createVisitsChart(visitsData);
 
         // Grafico distribuzione oraria
-        const timeCtx = document.getElementById('timeDistributionChart');
-        if (timeCtx) {
-            const timeData = getTimeDistribution(records);
-            charts.timeDistribution = new Chart(timeCtx, {
-                type: 'line',
-                data: {
-                    labels: Array.from({length: 24}, (_, i) => `${String(i).padStart(2, '0')}:00`),
-                    datasets: [{
-                        label: 'Visite per ora',
-                        data: timeData,
-                        fill: true,
-                        backgroundColor: 'rgba(54, 162, 235, 0.2)',
-                        borderColor: 'rgba(54, 162, 235, 1)',
-                        tension: 0.4
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    scales: {
-                        y: {
-                            beginAtZero: true,
-                            ticks: { stepSize: 1 }
-                        }
-                    }
-                }
-            });
-        }
+        const timeData = getTimeDistribution(records);
+        charts.timeDistribution = createTimeDistributionChart(timeData);
 
         // Grafico valutazioni
-        const ratingsCtx = document.getElementById('ratingsChart');
-        if (ratingsCtx) {
-            const ratings = getRatingsDistribution(records);
-            charts.ratings = new Chart(ratingsCtx, {
-                type: 'pie',
-                data: {
-                    labels: ['⭐', '⭐⭐', '⭐⭐⭐', '⭐⭐⭐⭐', '⭐⭐⭐⭐⭐'],
-                    datasets: [{
-                        data: ratings,
-                        backgroundColor: [
-                            'rgba(255, 99, 132, 0.6)',
-                            'rgba(255, 159, 64, 0.6)',
-                            'rgba(255, 205, 86, 0.6)',
-                            'rgba(75, 192, 192, 0.6)',
-                            'rgba(54, 162, 235, 0.6)'
-                        ],
-                        borderColor: [
-                            'rgba(255, 99, 132, 1)',
-                            'rgba(255, 159, 64, 1)',
-                            'rgba(255, 205, 86, 1)',
-                            'rgba(75, 192, 192, 1)',
-                            'rgba(54, 162, 235, 1)'
-                        ],
-                        borderWidth: 1
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false
-                }
-            });
-        }
+        const ratingsData = getRatingsDistribution(records);
+        charts.ratings = createRatingsChart(ratingsData);
 
         // Grafico durata media
-        const durationCtx = document.getElementById('durationChart');
-        if (durationCtx) {
-            const duration = getAverageDurationByDay(records);
-            charts.duration = new Chart(durationCtx, {
-                type: 'bar',
-                data: {
-                    labels: duration.labels,
-                    datasets: [{
-                        label: 'Durata media (minuti)',
-                        data: duration.data,
-                        backgroundColor: 'rgba(153, 102, 255, 0.6)',
-                        borderColor: 'rgba(153, 102, 255, 1)',
-                        borderWidth: 1
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    scales: {
-                        y: {
-                            beginAtZero: true
-                        }
-                    }
-                }
-            });
-        }
+        const durationData = getAverageDurationByDay(records);
+        charts.duration = createDurationChart(durationData);
     } catch (error) {
         console.error('Errore nell\'inizializzazione dei grafici:', error);
         document.querySelector('.charts-container').innerHTML = 
@@ -489,7 +384,13 @@ function getLastSevenDaysVisits(records) {
             const d = new Date(date);
             return d.toLocaleDateString('it-IT', { weekday: 'short', day: 'numeric' });
         }),
-        data: last7Days.map(day => visitsByDay[day])
+        datasets: [{
+            label: 'Visite',
+            data: last7Days.map(day => visitsByDay[day]),
+            backgroundColor: 'rgba(75, 192, 192, 0.6)',
+            borderColor: 'rgba(75, 192, 192, 1)',
+            borderWidth: 1
+        }]
     };
 }
 
@@ -506,7 +407,17 @@ function getTimeDistribution(records) {
             const hour = new Date(record.date).getHours();
             distribution[hour]++;
         });
-    return distribution;
+    return {
+        labels: Array.from({length: 24}, (_, i) => `${String(i).padStart(2, '0')}:00`),
+        datasets: [{
+            label: 'Visite per ora',
+            data: distribution,
+            fill: true,
+            backgroundColor: 'rgba(54, 162, 235, 0.2)',
+            borderColor: 'rgba(54, 162, 235, 1)',
+            tension: 0.4
+        }]
+    };
 }
 
 function getRatingsDistribution(records) {
@@ -521,7 +432,27 @@ function getRatingsDistribution(records) {
                 distribution[record.rating - 1]++;
             }
         });
-    return distribution;
+    return {
+        labels: ['⭐', '⭐⭐', '⭐⭐⭐', '⭐⭐⭐⭐', '⭐⭐⭐⭐⭐'],
+        datasets: [{
+            data: distribution,
+            backgroundColor: [
+                'rgba(255, 99, 132, 0.6)',
+                'rgba(255, 159, 64, 0.6)',
+                'rgba(255, 205, 86, 0.6)',
+                'rgba(75, 192, 192, 0.6)',
+                'rgba(54, 162, 235, 0.6)'
+            ],
+            borderColor: [
+                'rgba(255, 99, 132, 1)',
+                'rgba(255, 159, 64, 1)',
+                'rgba(255, 205, 86, 1)',
+                'rgba(75, 192, 192, 1)',
+                'rgba(54, 162, 235, 1)'
+            ],
+            borderWidth: 1
+        }]
+    };
 }
 
 function getAverageDurationByDay(records) {
@@ -545,12 +476,18 @@ function getAverageDurationByDay(records) {
 
     return {
         labels: orderedDays,
-        data: [...durationsByDay.slice(today + 1), ...durationsByDay.slice(0, today + 1)]
-            .map(durations => 
-                durations.length > 0 
-                    ? Math.round(durations.reduce((a, b) => a + b) / durations.length) 
-                    : 0
-            )
+        datasets: [{
+            label: 'Durata media (minuti)',
+            data: [...durationsByDay.slice(today + 1), ...durationsByDay.slice(0, today + 1)]
+                .map(durations => 
+                    durations.length > 0 
+                        ? Math.round(durations.reduce((a, b) => a + b) / durations.length) 
+                        : 0
+                ),
+            backgroundColor: 'rgba(153, 102, 255, 0.6)',
+            borderColor: 'rgba(153, 102, 255, 1)',
+            borderWidth: 1
+        }]
     };
 }
 
@@ -605,4 +542,108 @@ function stopTimer() {
     showNotification('Timer fermato ⏱️');
     
     startTime = null;
+}
+
+// Funzioni di creazione dei grafici
+function createVisitsChart(data) {
+    const ctx = document.getElementById('visitsChart').getContext('2d');
+    return new Chart(ctx, {
+        type: 'bar',
+        data: data,
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: false
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        stepSize: 1
+                    }
+                }
+            }
+        }
+    });
+}
+
+function createTimeDistributionChart(data) {
+    const ctx = document.getElementById('timeDistributionChart').getContext('2d');
+    return new Chart(ctx, {
+        type: 'line',
+        data: data,
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: false
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        stepSize: 1
+                    }
+                }
+            }
+        }
+    });
+}
+
+function createRatingsChart(data) {
+    const ctx = document.getElementById('ratingsChart').getContext('2d');
+    return new Chart(ctx, {
+        type: 'line',
+        data: data,
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: false
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    max: 5,
+                    ticks: {
+                        stepSize: 1
+                    }
+                }
+            }
+        }
+    });
+}
+
+function createDurationChart(data) {
+    const ctx = document.getElementById('durationChart').getContext('2d');
+    return new Chart(ctx, {
+        type: 'bar',
+        data: data,
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: false
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        callback: function(value) {
+                            return value + ' min';
+                        }
+                    }
+                }
+            }
+        }
+    });
 }

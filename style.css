@@ -178,33 +178,72 @@ h2 {
     gap: 20px;
     padding: 20px;
     width: 100%;
+    max-width: 100%;
 }
 
 .chart-wrapper {
     background: #fff;
     border-radius: 10px;
-    padding: 20px;
+    padding: 15px;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    min-height: 300px;
+    min-height: 250px;
     position: relative;
+    width: 100%;
+    overflow: hidden;
 }
 
 .chart-wrapper h3 {
     margin: 0 0 15px 0;
     font-size: 1.1rem;
     color: #333;
+    text-align: center;
 }
 
 .chart-wrapper canvas {
     width: 100% !important;
-    height: 250px !important;
+    height: auto !important;
+    max-height: 300px;
+    aspect-ratio: 16/9;
 }
 
-.no-data {
-    text-align: center;
-    padding: 20px;
-    color: #666;
-    font-style: italic;
+@media (max-width: 768px) {
+    .charts-container {
+        grid-template-columns: 1fr;
+        padding: 10px;
+        gap: 15px;
+    }
+
+    .chart-wrapper {
+        min-height: 200px;
+        padding: 10px;
+    }
+
+    .chart-wrapper canvas {
+        max-height: 250px;
+    }
+
+    .chart-wrapper h3 {
+        font-size: 1rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .container {
+        padding: 1rem;
+    }
+    
+    .charts-container {
+        padding: 5px;
+        gap: 10px;
+    }
+
+    .chart-wrapper {
+        min-height: 180px;
+    }
+
+    .chart-wrapper canvas {
+        max-height: 200px;
+    }
 }
 
 /* Stili per la pagina dei grafici */
