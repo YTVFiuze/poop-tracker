@@ -177,56 +177,69 @@ function resetForm() {
     notesInput.value = '';
 }
 
+// Funzione per calcolare la durata dal timer
+function calculateDuration() {
+    if (!startTime) return 0;
+    const endTime = new Date();
+    const diffInMs = endTime - startTime;
+    const diffInMinutes = Math.round(diffInMs / (1000 * 60));
+    console.log('Durata calcolata:', diffInMinutes, 'minuti');
+    return diffInMinutes;
+}
+
+// Funzione per fermare il timer
+function stopTimer() {
+    if (!startTime) return;
+    
+    const duration = calculateDuration();
+    console.log('Timer fermato, durata:', duration, 'minuti');
+    
+    // Aggiorna il campo durata nel form
+    const durationInput = document.getElementById('duration');
+    if (durationInput) {
+        durationInput.value = duration;
+        console.log('Campo durata aggiornato:', duration);
+    }
+    
+    document.getElementById('timerPopup').style.display = 'none';
+    showNotification('Timer fermato ⏱️');
+    
+    startTime = null;
+}
+
 // Salvataggio dei dati
-async function saveRecord(formData) {
+async function saveRecord(data) {
     try {
-        // Assicurati che la durata sia un numero
-        formData.duration = parseInt(formData.duration) || 0;
+        // Assicurati che la durata sia un numero valido
+        const duration = parseInt(data.duration);
+        data.duration = isNaN(duration) ? 0 : duration;
         
+        console.log('Salvataggio record con durata:', data.duration, 'minuti');
+        
+        // Carica i record esistenti
         let records = [];
-        const stored = localStorage.getItem('poopRecords');
-        
-        if (stored) {
-            try {
-                records = JSON.parse(stored);
-                if (!Array.isArray(records)) {
-                    records = [];
-                }
-            } catch (e) {
-                console.error('Errore nel parsing dei record:', e);
-                records = [];
-            }
-        }
-
-        const dateTime = new Date(`${formData.date}T${formData.time}`);
-        
-        // Validazione dei dati
-        if (isNaN(dateTime.getTime())) {
-            throw new Error('Data/ora non valida');
+        try {
+            records = JSON.parse(localStorage.getItem('poopRecords') || '[]');
+            console.log('Record esistenti caricati:', records);
+        } catch (e) {
+            console.error('Errore nel caricamento dei record esistenti:', e);
+            records = [];
         }
         
-        const newRecord = {
-            id: Date.now(),
-            date: dateTime.toISOString(),
-            duration: Math.max(0, formData.duration || 0),
-            rating: Math.min(5, Math.max(1, formData.rating || 3)),
-            mood: formData.mood || '😊',
-            notes: (formData.notes || '').trim()
-        };
-
-        records.unshift(newRecord);
+        // Aggiungi il nuovo record
+        records.push(data);
         
-        // Limita il numero di record memorizzati (opzionale)
-        const MAX_RECORDS = 1000;
-        if (records.length > MAX_RECORDS) {
-            records = records.slice(0, MAX_RECORDS);
-        }
-        
+        // Salva nel localStorage
         localStorage.setItem('poopRecords', JSON.stringify(records));
-        return true;
+        console.log('Record salvato con successo:', data);
+        
+        // Aggiorna i grafici se siamo nella pagina dei grafici
+        if (window.location.pathname.includes('charts.html')) {
+            initializeCharts();
+        }
     } catch (error) {
         console.error('Errore nel salvataggio:', error);
-        throw error; // Propaga l'errore per gestirlo nel form
+        throw error;
     }
 }
 
@@ -553,12 +566,21 @@ function getAverageDurationByDay(records) {
         if (dayRecords.length > 0) {
             // Calcola la media delle durate, assicurandosi che siano numeri
             const totalDuration = dayRecords.reduce((sum, record) => {
-                const duration = parseInt(record.duration) || 0;
-                return sum + duration;
+                const duration = parseInt(record.duration);
+                const validDuration = isNaN(duration) ? 0 : duration;
+                console.log(`Durata record per ${targetDate.toISOString().split('T')[0]}:`, validDuration);
+                return sum + validDuration;
             }, 0);
+            
             const avgDuration = totalDuration / dayRecords.length;
-            durations.push(Math.round(avgDuration));
-            console.log(`Durata media per ${targetDate.toISOString().split('T')[0]}: ${Math.round(avgDuration)} minuti`);
+            const roundedAvg = Math.round(avgDuration);
+            durations.push(roundedAvg);
+            
+            console.log(`${targetDate.toISOString().split('T')[0]}:`, {
+                totalDuration,
+                numRecords: dayRecords.length,
+                avgDuration: roundedAvg
+            });
         } else {
             durations.push(null);
             console.log(`Nessun record per ${targetDate.toISOString().split('T')[0]}`);
@@ -570,8 +592,8 @@ function getAverageDurationByDay(records) {
         }));
     });
 
-    console.log('Labels finali:', labels);
     console.log('Durate finali:', durations);
+    console.log('Labels finali:', labels);
 
     return {
         labels: labels,
@@ -599,6 +621,10 @@ function createDurationChart(data) {
         charts.duration.destroy();
     }
 
+    // Trova il valore massimo per impostare il limite dell'asse y
+    const maxDuration = Math.max(...data.datasets[0].data.filter(v => v !== null)) || 10;
+    const yAxisMax = Math.ceil(maxDuration / 5) * 5; // Arrotonda al multiplo di 5 più vicino
+
     return new Chart(ctx, {
         type: 'bar',
         data: data,
@@ -622,8 +648,9 @@ function createDurationChart(data) {
             scales: {
                 y: {
                     beginAtZero: true,
+                    max: yAxisMax,
                     ticks: {
-                        stepSize: 1,
+                        stepSize: Math.max(1, Math.floor(yAxisMax / 5)),
                         callback: function(value) {
                             return Math.round(value) + ' min';
                         }
@@ -716,7 +743,6 @@ function createRatingsChart(data) {
         charts.ratings = null;
     }
 
-    // Crea il nuovo grafico con configurazione semplificata
     return new Chart(canvas, {
         type: 'line',
         data: data,
@@ -789,19 +815,4 @@ function updateTimerDisplay() {
     
     document.getElementById('timer').textContent = 
         `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
-}
-
-function stopTimer() {
-    if (!timerInterval) return;
-    
-    clearInterval(timerInterval);
-    timerInterval = null;
-    
-    const elapsed = Math.floor((Date.now() - startTime) / 1000);
-    document.getElementById('duration').value = Math.max(1, Math.round(elapsed / 60));
-    
-    document.getElementById('timerPopup').style.display = 'none';
-    showNotification('Timer fermato ⏱️');
-    
-    startTime = null;
 }
