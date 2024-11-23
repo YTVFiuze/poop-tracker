@@ -424,33 +424,47 @@ function getRatingsDistribution(records) {
     const now = new Date();
     const last30Days = now.getTime() - (30 * 24 * 60 * 60 * 1000);
 
-    const distribution = Array(5).fill(0);
-    records
+    // Filtra i record degli ultimi 30 giorni e ordinali per data
+    const recentRecords = records
         .filter(record => new Date(record.date).getTime() >= last30Days)
-        .forEach(record => {
-            if (record.rating >= 1 && record.rating <= 5) {
-                distribution[record.rating - 1]++;
-            }
-        });
+        .sort((a, b) => new Date(a.date) - new Date(b.date));
+
+    // Raggruppa i record per giorno
+    const ratingsByDay = {};
+    recentRecords.forEach(record => {
+        const date = new Date(record.date).toLocaleDateString('it-IT');
+        if (!ratingsByDay[date]) {
+            ratingsByDay[date] = [];
+        }
+        if (record.rating >= 1 && record.rating <= 5) {
+            ratingsByDay[date].push(record.rating);
+        }
+    });
+
+    // Calcola la media giornaliera
+    const dates = Object.keys(ratingsByDay);
+    const averageRatings = dates.map(date => {
+        const ratings = ratingsByDay[date];
+        return ratings.length > 0 
+            ? ratings.reduce((a, b) => a + b) / ratings.length 
+            : null;
+    });
+
     return {
-        labels: ['⭐', '⭐⭐', '⭐⭐⭐', '⭐⭐⭐⭐', '⭐⭐⭐⭐⭐'],
+        labels: dates.map(date => new Date(date).toLocaleDateString('it-IT', { 
+            day: 'numeric',
+            month: 'short'
+        })),
         datasets: [{
-            data: distribution,
-            backgroundColor: [
-                'rgba(255, 99, 132, 0.6)',
-                'rgba(255, 159, 64, 0.6)',
-                'rgba(255, 205, 86, 0.6)',
-                'rgba(75, 192, 192, 0.6)',
-                'rgba(54, 162, 235, 0.6)'
-            ],
-            borderColor: [
-                'rgba(255, 99, 132, 1)',
-                'rgba(255, 159, 64, 1)',
-                'rgba(255, 205, 86, 1)',
-                'rgba(75, 192, 192, 1)',
-                'rgba(54, 162, 235, 1)'
-            ],
-            borderWidth: 1
+            label: 'Valutazione media',
+            data: averageRatings,
+            fill: false,
+            backgroundColor: 'rgba(255, 159, 64, 0.6)',
+            borderColor: 'rgba(255, 159, 64, 1)',
+            borderWidth: 2,
+            tension: 0.4,
+            pointRadius: 4,
+            pointHoverRadius: 6
         }]
     };
 }
@@ -605,7 +619,8 @@ function createRatingsChart(data) {
             maintainAspectRatio: false,
             plugins: {
                 legend: {
-                    display: false
+                    display: true,
+                    position: 'top'
                 }
             },
             scales: {
@@ -613,7 +628,16 @@ function createRatingsChart(data) {
                     beginAtZero: true,
                     max: 5,
                     ticks: {
-                        stepSize: 1
+                        stepSize: 1,
+                        callback: function(value) {
+                            return '⭐'.repeat(value);
+                        }
+                    }
+                },
+                x: {
+                    ticks: {
+                        maxRotation: 45,
+                        minRotation: 45
                     }
                 }
             }
