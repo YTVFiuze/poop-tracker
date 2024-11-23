@@ -180,6 +180,9 @@ function resetForm() {
 // Salvataggio dei dati
 async function saveRecord(formData) {
     try {
+        // Assicurati che la durata sia un numero
+        formData.duration = parseInt(formData.duration) || 0;
+        
         let records = [];
         const stored = localStorage.getItem('poopRecords');
         
@@ -521,10 +524,14 @@ function getRatingsDistribution(records) {
 }
 
 function getAverageDurationByDay(records) {
+    console.log('Calcolo durata media per giorno, records:', records);
+    
     const now = new Date();
     const last7Days = [];
-    
-    // Crea array delle ultime 7 date
+    const durations = [];
+    const labels = [];
+
+    // Genera le date degli ultimi 7 giorni
     for (let i = 6; i >= 0; i--) {
         const date = new Date(now);
         date.setDate(date.getDate() - i);
@@ -532,31 +539,45 @@ function getAverageDurationByDay(records) {
         last7Days.push(date);
     }
 
-    // Prepara i dati per ogni giorno
-    const dailyDurations = last7Days.map(targetDate => {
+    // Calcola la durata media per ogni giorno
+    last7Days.forEach(targetDate => {
         const dayRecords = records.filter(record => {
             const recordDate = new Date(record.date);
-            return recordDate.getFullYear() === targetDate.getFullYear() &&
+            return recordDate.getDate() === targetDate.getDate() &&
                    recordDate.getMonth() === targetDate.getMonth() &&
-                   recordDate.getDate() === targetDate.getDate();
+                   recordDate.getFullYear() === targetDate.getFullYear();
         });
 
-        // Se non ci sono record per questo giorno, ritorna null
-        if (dayRecords.length === 0) return null;
+        console.log(`Record per ${targetDate.toISOString().split('T')[0]}:`, dayRecords);
 
-        // Calcola la durata media per il giorno
-        const avgDuration = dayRecords.reduce((sum, record) => sum + (record.duration || 0), 0) / dayRecords.length;
-        return Math.round(avgDuration);
-    });
+        if (dayRecords.length > 0) {
+            // Calcola la media delle durate, assicurandosi che siano numeri
+            const totalDuration = dayRecords.reduce((sum, record) => {
+                const duration = parseInt(record.duration) || 0;
+                return sum + duration;
+            }, 0);
+            const avgDuration = totalDuration / dayRecords.length;
+            durations.push(Math.round(avgDuration));
+            console.log(`Durata media per ${targetDate.toISOString().split('T')[0]}: ${Math.round(avgDuration)} minuti`);
+        } else {
+            durations.push(null);
+            console.log(`Nessun record per ${targetDate.toISOString().split('T')[0]}`);
+        }
 
-    return {
-        labels: last7Days.map(date => date.toLocaleDateString('it-IT', { 
+        labels.push(targetDate.toLocaleDateString('it-IT', {
             weekday: 'short',
             day: 'numeric'
-        })),
+        }));
+    });
+
+    console.log('Labels finali:', labels);
+    console.log('Durate finali:', durations);
+
+    return {
+        labels: labels,
         datasets: [{
-            label: 'Durata media giornaliera',
-            data: dailyDurations,
+            label: 'Durata Media (minuti)',
+            data: durations,
             backgroundColor: 'rgba(153, 102, 255, 0.2)',
             borderColor: 'rgba(153, 102, 255, 1)',
             borderWidth: 1
@@ -564,57 +585,62 @@ function getAverageDurationByDay(records) {
     };
 }
 
-// Funzioni di utilità
-function showNotification(message) {
-    const notification = document.createElement('div');
-    notification.className = 'notification';
-    notification.textContent = message;
-    document.body.appendChild(notification);
+function createDurationChart(data) {
+    console.log('Creazione grafico durata con dati:', data);
+    
+    const ctx = document.getElementById('durationChart');
+    if (!ctx) {
+        console.error('Canvas durationChart non trovato');
+        return null;
+    }
 
-    setTimeout(() => {
-        notification.classList.add('show');
-        setTimeout(() => {
-            notification.classList.remove('show');
-            setTimeout(() => notification.remove(), 300);
-        }, 2000);
-    }, 100);
-}
+    // Distruggi il grafico esistente se presente
+    if (charts.duration) {
+        charts.duration.destroy();
+    }
 
-// Timer functions
-function startTimer() {
-    if (timerInterval) return;
-    
-    startTime = Date.now();
-    document.getElementById('timerPopup').style.display = 'block';
-    
-    timerInterval = setInterval(updateTimerDisplay, 1000);
-    showNotification('Timer avviato ⏱️');
-}
-
-function updateTimerDisplay() {
-    if (!startTime || !timerInterval) return;
-    
-    const elapsed = Math.floor((Date.now() - startTime) / 1000);
-    const minutes = Math.floor(elapsed / 60);
-    const seconds = elapsed % 60;
-    
-    document.getElementById('timer').textContent = 
-        `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
-}
-
-function stopTimer() {
-    if (!timerInterval) return;
-    
-    clearInterval(timerInterval);
-    timerInterval = null;
-    
-    const elapsed = Math.floor((Date.now() - startTime) / 1000);
-    document.getElementById('duration').value = Math.max(1, Math.round(elapsed / 60));
-    
-    document.getElementById('timerPopup').style.display = 'none';
-    showNotification('Timer fermato ⏱️');
-    
-    startTime = null;
+    return new Chart(ctx, {
+        type: 'bar',
+        data: data,
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: false
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            const minutes = context.raw;
+                            if (minutes === null || minutes === undefined) return 'Nessun dato';
+                            return `${Math.round(minutes)} minuti`;
+                        }
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        stepSize: 1,
+                        callback: function(value) {
+                            return Math.round(value) + ' min';
+                        }
+                    },
+                    title: {
+                        display: true,
+                        text: 'Durata Media (minuti)'
+                    }
+                },
+                x: {
+                    grid: {
+                        display: false
+                    }
+                }
+            }
+        }
+    });
 }
 
 // Funzioni di creazione dei grafici
@@ -727,47 +753,55 @@ function createRatingsChart(data) {
     });
 }
 
-function createDurationChart(data) {
-    const ctx = document.getElementById('durationChart').getContext('2d');
-    return new Chart(ctx, {
-        type: 'bar',
-        data: data,
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: {
-                    display: false
-                },
-                tooltip: {
-                    callbacks: {
-                        label: function(context) {
-                            const minutes = context.raw;
-                            if (minutes === null || minutes === undefined) return 'Nessun dato';
-                            return `${Math.round(minutes)} min`;
-                        }
-                    }
-                }
-            },
-            scales: {
-                y: {
-                    beginAtZero: true,
-                    ticks: {
-                        callback: function(value) {
-                            return `${value} min`;
-                        }
-                    },
-                    title: {
-                        display: true,
-                        text: 'Durata Media (minuti)'
-                    }
-                },
-                x: {
-                    grid: {
-                        display: false
-                    }
-                }
-            }
-        }
-    });
+// Funzioni di utilità
+function showNotification(message) {
+    const notification = document.createElement('div');
+    notification.className = 'notification';
+    notification.textContent = message;
+    document.body.appendChild(notification);
+
+    setTimeout(() => {
+        notification.classList.add('show');
+        setTimeout(() => {
+            notification.classList.remove('show');
+            setTimeout(() => notification.remove(), 300);
+        }, 2000);
+    }, 100);
+}
+
+// Timer functions
+function startTimer() {
+    if (timerInterval) return;
+    
+    startTime = Date.now();
+    document.getElementById('timerPopup').style.display = 'block';
+    
+    timerInterval = setInterval(updateTimerDisplay, 1000);
+    showNotification('Timer avviato ⏱️');
+}
+
+function updateTimerDisplay() {
+    if (!startTime || !timerInterval) return;
+    
+    const elapsed = Math.floor((Date.now() - startTime) / 1000);
+    const minutes = Math.floor(elapsed / 60);
+    const seconds = elapsed % 60;
+    
+    document.getElementById('timer').textContent = 
+        `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+}
+
+function stopTimer() {
+    if (!timerInterval) return;
+    
+    clearInterval(timerInterval);
+    timerInterval = null;
+    
+    const elapsed = Math.floor((Date.now() - startTime) / 1000);
+    document.getElementById('duration').value = Math.max(1, Math.round(elapsed / 60));
+    
+    document.getElementById('timerPopup').style.display = 'none';
+    showNotification('Timer fermato ⏱️');
+    
+    startTime = null;
 }
