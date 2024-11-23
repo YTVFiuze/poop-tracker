@@ -238,26 +238,33 @@ function initializeCharts() {
             return;
         }
 
-        // Distruggi i grafici esistenti
-        Object.values(charts).forEach(chart => {
-            if (chart) chart.destroy();
-        });
+        // Distruggi i grafici esistenti se presenti
+        if (charts.ratings && typeof charts.ratings.destroy === 'function') {
+            charts.ratings.destroy();
+        }
+        if (charts.visits && typeof charts.visits.destroy === 'function') {
+            charts.visits.destroy();
+        }
+        if (charts.timeDistribution && typeof charts.timeDistribution.destroy === 'function') {
+            charts.timeDistribution.destroy();
+        }
+        if (charts.duration && typeof charts.duration.destroy === 'function') {
+            charts.duration.destroy();
+        }
 
-        // Grafico visite settimanali
-        const visitsData = getLastSevenDaysVisits(records);
-        charts.visits = createVisitsChart(visitsData);
-
-        // Grafico distribuzione oraria
-        const timeData = getTimeDistribution(records);
-        charts.timeDistribution = createTimeDistributionChart(timeData);
-
-        // Grafico valutazioni
+        // Ricrea tutti i grafici
         const ratingsData = getRatingsDistribution(records);
         charts.ratings = createRatingsChart(ratingsData);
 
-        // Grafico durata media
+        const visitsData = getLastSevenDaysVisits(records);
+        charts.visits = createVisitsChart(visitsData);
+
+        const timeData = getTimeDistribution(records);
+        charts.timeDistribution = createTimeDistributionChart(timeData);
+
         const durationData = getAverageDurationByDay(records);
         charts.duration = createDurationChart(durationData);
+
     } catch (error) {
         console.error('Errore nell\'inizializzazione dei grafici:', error);
         document.querySelector('.charts-container').innerHTML = 
@@ -413,84 +420,117 @@ function getTimeDistribution(records) {
 }
 
 function getRatingsDistribution(records) {
-    const now = new Date();
-    const last7Days = now.getTime() - (7 * 24 * 60 * 60 * 1000);
-
-    // Crea un array di date per gli ultimi 7 giorni
-    const dates = [];
-    for (let i = 6; i >= 0; i--) {
-        const date = new Date(now);
-        date.setDate(date.getDate() - i);
-        date.setHours(0, 0, 0, 0);
-        dates.push(date);
+    try {
+        // Ottieni la data di oggi
+        const now = new Date();
+        now.setHours(0, 0, 0, 0);
+        
+        // Array per gli ultimi 7 giorni
+        const days = [];
+        const ratings = [];
+        const labels = [];
+        
+        // Popola gli array per gli ultimi 7 giorni
+        for (let i = 6; i >= 0; i--) {
+            const date = new Date(now);
+            date.setDate(date.getDate() - i);
+            days.push(date);
+            
+            // Filtra i record per questo giorno
+            const dayRecords = records.filter(record => {
+                const recordDate = new Date(record.date);
+                return recordDate.getFullYear() === date.getFullYear() &&
+                       recordDate.getMonth() === date.getMonth() &&
+                       recordDate.getDate() === date.getDate();
+            });
+            
+            // Calcola la media delle valutazioni per questo giorno
+            if (dayRecords.length > 0) {
+                const sum = dayRecords.reduce((acc, record) => {
+                    return acc + (record.rating || 0);
+                }, 0);
+                ratings.push(sum / dayRecords.length);
+            } else {
+                ratings.push(null);
+            }
+            
+            // Formatta la label per questo giorno
+            labels.push(date.toLocaleDateString('it-IT', {
+                weekday: 'short',
+                day: 'numeric'
+            }));
+        }
+        
+        return {
+            labels: labels,
+            datasets: [{
+                label: 'Valutazione Media',
+                data: ratings,
+                borderColor: 'rgb(255, 159, 64)',
+                backgroundColor: 'rgba(255, 159, 64, 0.2)',
+                borderWidth: 2,
+                fill: true,
+                tension: 0.1,
+                pointRadius: 6,
+                pointHoverRadius: 8,
+                pointBackgroundColor: 'rgb(255, 159, 64)',
+                pointBorderColor: 'white',
+                pointBorderWidth: 2,
+                spanGaps: true
+            }]
+        };
+    } catch (error) {
+        console.error('Errore in getRatingsDistribution:', error);
+        return {
+            labels: [],
+            datasets: [{
+                label: 'Valutazione Media',
+                data: [],
+                borderColor: 'rgb(255, 159, 64)',
+                backgroundColor: 'rgba(255, 159, 64, 0.2)'
+            }]
+        };
     }
-
-    // Prepara i dati per ogni giorno
-    const dailyRatings = dates.map(date => {
-        const dayRecords = records.filter(record => {
-            const recordDate = new Date(record.date);
-            return recordDate.getDate() === date.getDate() &&
-                   recordDate.getMonth() === date.getMonth() &&
-                   recordDate.getFullYear() === date.getFullYear() &&
-                   record.rating >= 1 && record.rating <= 5;
-        });
-
-        if (dayRecords.length === 0) return null;
-
-        // Calcola la media delle valutazioni per il giorno
-        return dayRecords.reduce((sum, record) => sum + record.rating, 0) / dayRecords.length;
-    });
-
-    return {
-        labels: dates.map(date => date.toLocaleDateString('it-IT', { 
-            weekday: 'short',
-            day: 'numeric'
-        })),
-        datasets: [{
-            label: 'Valutazione media',
-            data: dailyRatings,
-            fill: false,
-            backgroundColor: 'rgba(255, 159, 64, 0.6)',
-            borderColor: 'rgba(255, 159, 64, 1)',
-            borderWidth: 2,
-            tension: 0.1,
-            pointRadius: 4,
-            pointHoverRadius: 6,
-            spanGaps: true // Permette di collegare i punti anche con valori null
-        }]
-    };
 }
 
 function getAverageDurationByDay(records) {
     const now = new Date();
-    const last7Days = now.getTime() - (7 * 24 * 60 * 60 * 1000);
+    const last7Days = [];
     
-    const durationsByDay = Array(7).fill(0).map(() => []);
-    
-    records
-        .filter(record => new Date(record.date).getTime() >= last7Days)
-        .forEach(record => {
-            const day = new Date(record.date).getDay();
-            if (record.duration >= 0) {
-                durationsByDay[day].push(record.duration);
-            }
+    // Crea array delle ultime 7 date
+    for (let i = 6; i >= 0; i--) {
+        const date = new Date(now);
+        date.setDate(date.getDate() - i);
+        date.setHours(0, 0, 0, 0);
+        last7Days.push(date);
+    }
+
+    // Prepara i dati per ogni giorno
+    const dailyDurations = last7Days.map(targetDate => {
+        const dayRecords = records.filter(record => {
+            const recordDate = new Date(record.date);
+            return recordDate.getFullYear() === targetDate.getFullYear() &&
+                   recordDate.getMonth() === targetDate.getMonth() &&
+                   recordDate.getDate() === targetDate.getDate();
         });
 
-    const dayNames = ['Dom', 'Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab'];
-    const today = now.getDay();
-    const orderedDays = [...dayNames.slice(today + 1), ...dayNames.slice(0, today + 1)];
+        // Se non ci sono record per questo giorno, ritorna null
+        if (dayRecords.length === 0) return null;
+
+        // Calcola la durata media per il giorno
+        const avgDuration = dayRecords.reduce((sum, record) => sum + (record.duration || 0), 0) / dayRecords.length;
+        return Math.round(avgDuration);
+    });
 
     return {
-        labels: orderedDays,
+        labels: last7Days.map(date => date.toLocaleDateString('it-IT', { 
+            weekday: 'short',
+            day: 'numeric'
+        })),
         datasets: [{
-            label: 'Durata media (minuti)',
-            data: [...durationsByDay.slice(today + 1), ...durationsByDay.slice(0, today + 1)]
-                .map(durations => 
-                    durations.length > 0 
-                        ? Math.round(durations.reduce((a, b) => a + b) / durations.length) 
-                        : 0
-                ),
-            backgroundColor: 'rgba(153, 102, 255, 0.6)',
+            label: 'Durata media giornaliera',
+            data: dailyDurations,
+            backgroundColor: 'rgba(153, 102, 255, 0.2)',
             borderColor: 'rgba(153, 102, 255, 1)',
             borderWidth: 1
         }]
@@ -602,83 +642,78 @@ function createTimeDistributionChart(data) {
 }
 
 function createRatingsChart(data) {
-    const ctx = document.getElementById('ratingsChart').getContext('2d');
-    return new Chart(ctx, {
-        type: 'line',
-        data: data,
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: {
-                    display: true,
-                    position: 'top',
-                    labels: {
-                        boxWidth: 20,
-                        padding: 10,
-                        font: {
-                            size: function() {
-                                return window.innerWidth < 768 ? 10 : 12;
+    try {
+        const ctx = document.getElementById('ratingsChart');
+        if (!ctx) {
+            console.error('Canvas ratingsChart non trovato');
+            return null;
+        }
+
+        return new Chart(ctx, {
+            type: 'line',
+            data: data,
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: true,
+                        position: 'top',
+                        labels: {
+                            font: {
+                                size: 12
+                            }
+                        }
+                    },
+                    tooltip: {
+                        enabled: true,
+                        mode: 'index',
+                        intersect: false,
+                        callbacks: {
+                            label: function(context) {
+                                const value = context.raw;
+                                if (value === null) return 'Nessuna valutazione';
+                                return `Valutazione: ${value.toFixed(1)} ⭐`;
                             }
                         }
                     }
                 },
-                tooltip: {
-                    callbacks: {
-                        label: function(context) {
-                            const value = context.raw;
-                            if (value === null) return 'Nessuna valutazione';
-                            return `Valutazione: ${value.toFixed(1)} ⭐`;
-                        }
-                    }
-                }
-            },
-            scales: {
-                y: {
-                    beginAtZero: true,
-                    max: 5,
-                    ticks: {
-                        stepSize: 1,
-                        font: {
-                            size: function() {
-                                return window.innerWidth < 768 ? 10 : 12;
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        max: 5,
+                        ticks: {
+                            stepSize: 1,
+                            callback: function(value) {
+                                return '⭐'.repeat(value);
                             }
                         },
-                        callback: function(value) {
-                            if (value === 0) return '0';
-                            return '⭐'.repeat(value);
+                        grid: {
+                            color: 'rgba(0, 0, 0, 0.1)'
                         }
                     },
-                    grid: {
-                        drawBorder: true,
-                        color: 'rgba(0, 0, 0, 0.1)'
-                    }
-                },
-                x: {
-                    ticks: {
-                        maxRotation: 45,
-                        minRotation: 45,
-                        font: {
-                            size: function() {
-                                return window.innerWidth < 768 ? 10 : 12;
+                    x: {
+                        grid: {
+                            display: false
+                        },
+                        ticks: {
+                            font: {
+                                size: 12
                             }
                         }
-                    },
-                    grid: {
-                        display: false
                     }
-                }
-            },
-            layout: {
-                padding: {
-                    left: 10,
-                    right: 10,
-                    top: 10,
-                    bottom: 10
+                },
+                interaction: {
+                    mode: 'nearest',
+                    axis: 'x',
+                    intersect: false
                 }
             }
-        }
-    });
+        });
+    } catch (error) {
+        console.error('Errore in createRatingsChart:', error);
+        return null;
+    }
 }
 
 function createDurationChart(data) {
