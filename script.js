@@ -738,6 +738,15 @@ function createDurationChart(data) {
             plugins: {
                 legend: {
                     display: false
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            const minutes = context.raw;
+                            if (minutes === null || minutes === undefined) return 'Nessun dato';
+                            return `${Math.round(minutes)} min`;
+                        }
+                    }
                 }
             },
             scales: {
@@ -745,8 +754,17 @@ function createDurationChart(data) {
                     beginAtZero: true,
                     ticks: {
                         callback: function(value) {
-                            return value + ' min';
+                            return `${value} min`;
                         }
+                    },
+                    title: {
+                        display: true,
+                        text: 'Durata Media (minuti)'
+                    }
+                },
+                x: {
+                    grid: {
+                        display: false
                     }
                 }
             }
