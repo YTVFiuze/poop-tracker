@@ -50,6 +50,13 @@ document.addEventListener('DOMContentLoaded', () => {
     // Inizializza i grafici se siamo nella pagina charts.html
     if (window.location.pathname.includes('charts.html')) {
         initializeCharts();
+        setupChartUpdates();
+    }
+
+    // Inizializza le statistiche se siamo nella pagina statistics.html
+    if (window.location.pathname.includes('statistics.html')) {
+        updateStatistics();
+        setupStatisticsUpdates();
     }
 
     // Mostra un consiglio casuale
@@ -100,7 +107,7 @@ function setupEventListeners() {
 // Gestione del form
 async function handleFormSubmit(event) {
     event.preventDefault();
-
+    
     try {
         const formData = {
             date: document.getElementById('date').value,
@@ -108,30 +115,27 @@ async function handleFormSubmit(event) {
             duration: parseInt(document.getElementById('duration').value) || 0,
             rating: parseInt(document.getElementById('rating').value) || 3,
             mood: document.getElementById('mood').value || '😊',
-            notes: document.getElementById('notes').value.trim()
+            notes: document.getElementById('notes').value || ''
         };
 
-        // Validazione data e ora
-        if (!formData.date || !formData.time) {
-            showNotification('Inserisci data e ora');
-            return;
+        await saveRecord(formData);
+        
+        // Aggiorna i grafici in tutte le finestre aperte
+        if (window.localStorage) {
+            // Trigger un evento personalizzato per notificare altre finestre
+            const updateEvent = new StorageEvent('storage', {
+                key: 'poopRecords',
+                newValue: localStorage.getItem('poopRecords'),
+                url: window.location.href
+            });
+            window.dispatchEvent(updateEvent);
         }
 
-        // Controlla che la data/ora non sia nel futuro
-        const selectedDateTime = new Date(`${formData.date}T${formData.time}`);
-        if (selectedDateTime > new Date()) {
-            showNotification('Non puoi registrare visite future ⚠️');
-            return;
-        }
-
-        if (await saveRecord(formData)) {
-            // Reset completo del form
-            resetForm();
-            showNotification('Visita registrata con successo! 🚽');
-        }
+        showNotification('Registrazione salvata con successo! 🎉');
+        resetForm();
     } catch (error) {
-        console.error('Errore durante il salvataggio:', error);
-        showNotification('Errore durante il salvataggio ❌');
+        console.error('Errore nel salvataggio:', error);
+        showNotification('Errore nel salvataggio. Riprova. ❌');
     }
 }
 
@@ -335,29 +339,17 @@ function setupStatisticsUpdates() {
     }
 }
 
-// Aggiungi setupChartUpdates all'inizializzazione della pagina
-document.addEventListener('DOMContentLoaded', () => {
-    // Setup esistente
-    const dateInput = document.getElementById('date');
-    if (dateInput) {
-        const today = new Date().toISOString().split('T')[0];
-        dateInput.value = today;
-    }
-
-    const timeInput = document.getElementById('time');
-    if (timeInput) {
-        const now = new Date();
-        timeInput.value = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
-    }
-
-    setupEventListeners();
-    setupChartUpdates(); 
-    setupStatisticsUpdates(); 
-
-    const dailyTip = document.getElementById('dailyTip');
-    if (dailyTip) {
-        const randomTip = healthTips[Math.floor(Math.random() * healthTips.length)];
-        dailyTip.textContent = randomTip;
+// Aggiungi listener per gli aggiornamenti del localStorage
+window.addEventListener('storage', (event) => {
+    if (event.key === 'poopRecords') {
+        // Se siamo nella pagina dei grafici, aggiornali
+        if (window.location.pathname.includes('charts.html')) {
+            initializeCharts();
+        }
+        // Se siamo nella pagina delle statistiche, aggiornale
+        if (window.location.pathname.includes('statistics.html')) {
+            updateStatistics();
+        }
     }
 });
 
@@ -422,49 +414,49 @@ function getTimeDistribution(records) {
 
 function getRatingsDistribution(records) {
     const now = new Date();
-    const last30Days = now.getTime() - (30 * 24 * 60 * 60 * 1000);
+    const last7Days = now.getTime() - (7 * 24 * 60 * 60 * 1000);
 
-    // Filtra i record degli ultimi 30 giorni e ordinali per data
-    const recentRecords = records
-        .filter(record => new Date(record.date).getTime() >= last30Days)
-        .sort((a, b) => new Date(a.date) - new Date(b.date));
+    // Crea un array di date per gli ultimi 7 giorni
+    const dates = [];
+    for (let i = 6; i >= 0; i--) {
+        const date = new Date(now);
+        date.setDate(date.getDate() - i);
+        date.setHours(0, 0, 0, 0);
+        dates.push(date);
+    }
 
-    // Raggruppa i record per giorno
-    const ratingsByDay = {};
-    recentRecords.forEach(record => {
-        const date = new Date(record.date).toLocaleDateString('it-IT');
-        if (!ratingsByDay[date]) {
-            ratingsByDay[date] = [];
-        }
-        if (record.rating >= 1 && record.rating <= 5) {
-            ratingsByDay[date].push(record.rating);
-        }
-    });
+    // Prepara i dati per ogni giorno
+    const dailyRatings = dates.map(date => {
+        const dayRecords = records.filter(record => {
+            const recordDate = new Date(record.date);
+            return recordDate.getDate() === date.getDate() &&
+                   recordDate.getMonth() === date.getMonth() &&
+                   recordDate.getFullYear() === date.getFullYear() &&
+                   record.rating >= 1 && record.rating <= 5;
+        });
 
-    // Calcola la media giornaliera
-    const dates = Object.keys(ratingsByDay);
-    const averageRatings = dates.map(date => {
-        const ratings = ratingsByDay[date];
-        return ratings.length > 0 
-            ? ratings.reduce((a, b) => a + b) / ratings.length 
-            : null;
+        if (dayRecords.length === 0) return null;
+
+        // Calcola la media delle valutazioni per il giorno
+        return dayRecords.reduce((sum, record) => sum + record.rating, 0) / dayRecords.length;
     });
 
     return {
-        labels: dates.map(date => new Date(date).toLocaleDateString('it-IT', { 
-            day: 'numeric',
-            month: 'short'
+        labels: dates.map(date => date.toLocaleDateString('it-IT', { 
+            weekday: 'short',
+            day: 'numeric'
         })),
         datasets: [{
             label: 'Valutazione media',
-            data: averageRatings,
+            data: dailyRatings,
             fill: false,
             backgroundColor: 'rgba(255, 159, 64, 0.6)',
             borderColor: 'rgba(255, 159, 64, 1)',
             borderWidth: 2,
-            tension: 0.4,
+            tension: 0.1,
             pointRadius: 4,
-            pointHoverRadius: 6
+            pointHoverRadius: 6,
+            spanGaps: true // Permette di collegare i punti anche con valori null
         }]
     };
 }
@@ -620,7 +612,25 @@ function createRatingsChart(data) {
             plugins: {
                 legend: {
                     display: true,
-                    position: 'top'
+                    position: 'top',
+                    labels: {
+                        boxWidth: 20,
+                        padding: 10,
+                        font: {
+                            size: function() {
+                                return window.innerWidth < 768 ? 10 : 12;
+                            }
+                        }
+                    }
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            const value = context.raw;
+                            if (value === null) return 'Nessuna valutazione';
+                            return `Valutazione: ${value.toFixed(1)} ⭐`;
+                        }
+                    }
                 }
             },
             scales: {
@@ -629,16 +639,42 @@ function createRatingsChart(data) {
                     max: 5,
                     ticks: {
                         stepSize: 1,
+                        font: {
+                            size: function() {
+                                return window.innerWidth < 768 ? 10 : 12;
+                            }
+                        },
                         callback: function(value) {
+                            if (value === 0) return '0';
                             return '⭐'.repeat(value);
                         }
+                    },
+                    grid: {
+                        drawBorder: true,
+                        color: 'rgba(0, 0, 0, 0.1)'
                     }
                 },
                 x: {
                     ticks: {
                         maxRotation: 45,
-                        minRotation: 45
+                        minRotation: 45,
+                        font: {
+                            size: function() {
+                                return window.innerWidth < 768 ? 10 : 12;
+                            }
+                        }
+                    },
+                    grid: {
+                        display: false
                     }
+                }
+            },
+            layout: {
+                padding: {
+                    left: 10,
+                    right: 10,
+                    top: 10,
+                    bottom: 10
                 }
             }
         }
