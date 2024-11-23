@@ -229,33 +229,26 @@ async function saveRecord(formData) {
 
 // Inizializzazione dei grafici
 function initializeCharts() {
+    console.log('Inizializzazione grafici...');
+    
     try {
+        // Recupera i dati dal localStorage
         const records = JSON.parse(localStorage.getItem('poopRecords') || '[]');
-        
+        console.log('Record caricati:', records);
+
         if (records.length === 0) {
+            console.log('Nessun record trovato');
             document.querySelector('.charts-container').innerHTML = 
                 '<p class="no-data">Nessun dato disponibile. Aggiungi alcune visite per vedere le statistiche.</p>';
             return;
         }
 
-        // Distruggi i grafici esistenti se presenti
-        if (charts.ratings && typeof charts.ratings.destroy === 'function') {
-            charts.ratings.destroy();
-        }
-        if (charts.visits && typeof charts.visits.destroy === 'function') {
-            charts.visits.destroy();
-        }
-        if (charts.timeDistribution && typeof charts.timeDistribution.destroy === 'function') {
-            charts.timeDistribution.destroy();
-        }
-        if (charts.duration && typeof charts.duration.destroy === 'function') {
-            charts.duration.destroy();
-        }
-
-        // Ricrea tutti i grafici
+        // Inizializza il grafico delle valutazioni
+        console.log('Creazione grafico valutazioni...');
         const ratingsData = getRatingsDistribution(records);
         charts.ratings = createRatingsChart(ratingsData);
 
+        // Inizializza gli altri grafici...
         const visitsData = getLastSevenDaysVisits(records);
         charts.visits = createVisitsChart(visitsData);
 
@@ -265,8 +258,9 @@ function initializeCharts() {
         const durationData = getAverageDurationByDay(records);
         charts.duration = createDurationChart(durationData);
 
+        console.log('Inizializzazione completata');
     } catch (error) {
-        console.error('Errore nell\'inizializzazione dei grafici:', error);
+        console.error('Errore durante l\'inizializzazione:', error);
         document.querySelector('.charts-container').innerHTML = 
             '<p class="error">Si è verificato un errore nel caricamento dei grafici. Riprova più tardi.</p>';
     }
@@ -420,77 +414,77 @@ function getTimeDistribution(records) {
 }
 
 function getRatingsDistribution(records) {
-    try {
-        // Ottieni la data di oggi
-        const now = new Date();
-        now.setHours(0, 0, 0, 0);
-        
-        // Array per gli ultimi 7 giorni
-        const days = [];
-        const ratings = [];
-        const labels = [];
-        
-        // Popola gli array per gli ultimi 7 giorni
-        for (let i = 6; i >= 0; i--) {
-            const date = new Date(now);
-            date.setDate(date.getDate() - i);
-            days.push(date);
+    // Debug: stampa i record ricevuti
+    console.log('Records ricevuti:', records);
+
+    const now = new Date();
+    const dates = [];
+    const ratings = [];
+
+    // Crea array delle date per gli ultimi 7 giorni
+    for (let i = 6; i >= 0; i--) {
+        const date = new Date(now);
+        date.setDate(date.getDate() - i);
+        date.setHours(0, 0, 0, 0);
+        dates.push(date);
+    }
+
+    // Debug: stampa le date generate
+    console.log('Date generate:', dates);
+
+    // Per ogni giorno, calcola la media delle valutazioni
+    dates.forEach(date => {
+        const dayRecords = records.filter(record => {
+            const recordDate = new Date(record.date);
+            const sameDay = recordDate.getDate() === date.getDate() &&
+                          recordDate.getMonth() === date.getMonth() &&
+                          recordDate.getFullYear() === date.getFullYear();
             
-            // Filtra i record per questo giorno
-            const dayRecords = records.filter(record => {
-                const recordDate = new Date(record.date);
-                return recordDate.getFullYear() === date.getFullYear() &&
-                       recordDate.getMonth() === date.getMonth() &&
-                       recordDate.getDate() === date.getDate();
-            });
-            
-            // Calcola la media delle valutazioni per questo giorno
-            if (dayRecords.length > 0) {
-                const sum = dayRecords.reduce((acc, record) => {
-                    return acc + (record.rating || 0);
-                }, 0);
-                ratings.push(sum / dayRecords.length);
-            } else {
-                ratings.push(null);
+            // Debug: stampa i record trovati per ogni giorno
+            if (sameDay) {
+                console.log('Record trovati per', date.toISOString().split('T')[0], ':', record);
             }
             
-            // Formatta la label per questo giorno
-            labels.push(date.toLocaleDateString('it-IT', {
-                weekday: 'short',
-                day: 'numeric'
-            }));
+            return sameDay;
+        });
+
+        if (dayRecords.length > 0) {
+            const dayRatings = dayRecords.map(r => Number(r.rating) || 0);
+            const avgRating = dayRatings.reduce((a, b) => a + b, 0) / dayRatings.length;
+            ratings.push(avgRating);
+            
+            // Debug: stampa la media calcolata
+            console.log('Media calcolata per', date.toISOString().split('T')[0], ':', avgRating);
+        } else {
+            ratings.push(null);
         }
-        
-        return {
-            labels: labels,
-            datasets: [{
-                label: 'Valutazione Media',
-                data: ratings,
-                borderColor: 'rgb(255, 159, 64)',
-                backgroundColor: 'rgba(255, 159, 64, 0.2)',
-                borderWidth: 2,
-                fill: true,
-                tension: 0.1,
-                pointRadius: 6,
-                pointHoverRadius: 8,
-                pointBackgroundColor: 'rgb(255, 159, 64)',
-                pointBorderColor: 'white',
-                pointBorderWidth: 2,
-                spanGaps: true
-            }]
-        };
-    } catch (error) {
-        console.error('Errore in getRatingsDistribution:', error);
-        return {
-            labels: [],
-            datasets: [{
-                label: 'Valutazione Media',
-                data: [],
-                borderColor: 'rgb(255, 159, 64)',
-                backgroundColor: 'rgba(255, 159, 64, 0.2)'
-            }]
-        };
-    }
+    });
+
+    // Debug: stampa l'oggetto dati finale
+    const data = {
+        labels: dates.map(date => date.toLocaleDateString('it-IT', {
+            weekday: 'short',
+            day: 'numeric'
+        })),
+        datasets: [{
+            label: 'Valutazione Media',
+            data: ratings,
+            borderColor: 'rgb(255, 159, 64)',
+            backgroundColor: 'rgba(255, 159, 64, 0.2)',
+            borderWidth: 2,
+            fill: true,
+            tension: 0,
+            pointRadius: 6,
+            pointHoverRadius: 8,
+            pointBackgroundColor: 'rgb(255, 159, 64)',
+            pointBorderColor: 'white',
+            pointBorderWidth: 2,
+            spanGaps: true
+        }]
+    };
+    
+    console.log('Dati finali del grafico:', data);
+    return data;
 }
 
 function getAverageDurationByDay(records) {
@@ -642,78 +636,62 @@ function createTimeDistributionChart(data) {
 }
 
 function createRatingsChart(data) {
-    try {
-        const ctx = document.getElementById('ratingsChart');
-        if (!ctx) {
-            console.error('Canvas ratingsChart non trovato');
-            return null;
-        }
-
-        return new Chart(ctx, {
-            type: 'line',
-            data: data,
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        display: true,
-                        position: 'top',
-                        labels: {
-                            font: {
-                                size: 12
-                            }
-                        }
-                    },
-                    tooltip: {
-                        enabled: true,
-                        mode: 'index',
-                        intersect: false,
-                        callbacks: {
-                            label: function(context) {
-                                const value = context.raw;
-                                if (value === null) return 'Nessuna valutazione';
-                                return `Valutazione: ${value.toFixed(1)} ⭐`;
-                            }
-                        }
-                    }
-                },
-                scales: {
-                    y: {
-                        beginAtZero: true,
-                        max: 5,
-                        ticks: {
-                            stepSize: 1,
-                            callback: function(value) {
-                                return '⭐'.repeat(value);
-                            }
-                        },
-                        grid: {
-                            color: 'rgba(0, 0, 0, 0.1)'
-                        }
-                    },
-                    x: {
-                        grid: {
-                            display: false
-                        },
-                        ticks: {
-                            font: {
-                                size: 12
-                            }
-                        }
-                    }
-                },
-                interaction: {
-                    mode: 'nearest',
-                    axis: 'x',
-                    intersect: false
-                }
-            }
-        });
-    } catch (error) {
-        console.error('Errore in createRatingsChart:', error);
+    // Debug: verifica che il canvas esista
+    const canvas = document.getElementById('ratingsChart');
+    if (!canvas) {
+        console.error('Canvas ratingsChart non trovato!');
         return null;
     }
+    console.log('Canvas trovato:', canvas);
+
+    // Debug: verifica che i dati siano validi
+    if (!data || !data.datasets || !data.datasets[0] || !data.datasets[0].data) {
+        console.error('Dati non validi per il grafico:', data);
+        return null;
+    }
+
+    // Distruggi il grafico esistente se presente
+    if (charts.ratings) {
+        console.log('Distruggo il grafico esistente');
+        charts.ratings.destroy();
+        charts.ratings = null;
+    }
+
+    // Crea il nuovo grafico con configurazione semplificata
+    return new Chart(canvas, {
+        type: 'line',
+        data: data,
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: false
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            const value = context.raw;
+                            if (value === null) return 'Nessuna valutazione';
+                            return `${value.toFixed(1)} ⭐`;
+                        }
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    min: 0,
+                    max: 5,
+                    ticks: {
+                        stepSize: 1,
+                        callback: function(value) {
+                            return '⭐'.repeat(value);
+                        }
+                    }
+                }
+            }
+        }
+    });
 }
 
 function createDurationChart(data) {
